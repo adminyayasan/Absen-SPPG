@@ -392,7 +392,7 @@
 <!-- ==================== APP LAYOUT ==================== -->
 <div id="app-layout" class="hidden">
   <div id="sidebar">
-    <div class="sidebar-brand">📋 Sistem Absensi</div>
+    <div class="sidebar-brand">📋 <span class="sidebar-brand-text">Sistem Absensi</span></div>
     <div class="sidebar-user">
       <img id="sidebar-foto" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Foto">
       <div class="name" id="sidebar-nama">User</div>
@@ -407,6 +407,7 @@
       <div class="nav-item" data-page="my-payroll">📄 My Payroll</div>
       <div class="nav-item admin-only akuntan-only" data-page="absensi">📋 Data Absensi</div>
       <div class="nav-item admin-only" data-page="audit-log">📜 Catatan Aktivitas</div>
+      <div class="nav-item" data-page="absen-manual">📷 Absen</div>
       <div class="nav-item" id="btn-logout-sidebar" style="color:#ef4444;">🚪 Logout</div>
     </nav>
   </div>
@@ -682,6 +683,49 @@
         </div>
       </div>
 
+      <!-- PAGE: ABSEN MANUAL -->
+      <div id="page-absen-manual" class="page hidden">
+        <div class="device-ui" style="min-height:calc(100vh - 60px);">
+          <div id="absen-step-idle">
+            <div class="device-time" id="absen-clock">--:--</div>
+            <div class="device-date" id="absen-date">-</div>
+            <div class="device-btn-wrap">
+              <div class="device-btn-pulse"></div>
+              <div class="device-btn-pulse device-btn-pulse2"></div>
+              <button id="btn-absen-manual" class="device-btn-absen">
+                <span class="btn-icon">📷</span>
+                <span class="btn-label">Absen</span>
+              </button>
+            </div>
+            <div class="device-status">Tekan tombol untuk memulai absensi</div>
+          </div>
+          <div id="absen-step-qr" class="hidden" style="width:100%; max-width:500px; text-align:center;">
+            <div class="card-title mb-2" style="font-size:1.25rem;">📷 Scan QR Code ID Card</div>
+            <div class="form-group hidden" id="absen-qr-cam-group" style="margin-bottom:1rem;">
+              <label class="form-label">Pilih Kamera</label>
+              <select id="absen-qr-cam-select" class="form-select"></select>
+            </div>
+            <div id="absen-qr-video" style="width:100%;"></div>
+            <div class="device-status mt-2">Arahkan QR Code ke kamera</div>
+            <button id="btn-absen-qr-cancel" class="btn btn-outline mt-2">✖ Batal</button>
+          </div>
+          <div id="absen-step-face" class="hidden" style="width:100%; max-width:400px; text-align:center;">
+            <div class="card-title mb-2" style="font-size:1.25rem;">🧑 Scan Wajah</div>
+            <div class="camera-container">
+              <video id="absen-face-video" style="width:100%; border-radius:12px;" autoplay playsinline muted></video>
+              <div class="face-guide"></div>
+            </div>
+            <div id="absen-face-status" class="device-status mt-2">Posisikan wajah di dalam oval...</div>
+            <button id="btn-absen-face-cancel" class="btn btn-outline mt-2">✖ Batal</button>
+          </div>
+          <div id="absen-step-result" class="hidden" style="text-align:center;">
+            <div id="absen-result-icon" style="font-size:4rem; margin-bottom:1rem;"></div>
+            <div id="absen-result-text" style="font-size:1.25rem; font-weight:600;"></div>
+            <button id="btn-absen-result-ok" class="btn btn-primary btn-lg mt-2">OK</button>
+          </div>
+        </div>
+      </div>
+
       <!-- PAGE: AUDIT LOG -->
       <div id="page-audit-log" class="page hidden">
         <div class="card">
@@ -815,6 +859,7 @@ async function doLogin() {
       localStorage.setItem('absensi_device', JSON.stringify(res.device));
       localStorage.removeItem('absensi_user');
       startSessionCheck();
+      applyUserUI();
       navigateTo('device-absen');
     }
   } catch(e) {
@@ -871,6 +916,7 @@ const Routes = {
   'absensi': { el: 'page-absensi', auth: true, roles: ['ADMIN','AKUNTAN'] },
   'device-absen': { el: 'page-device-absen', auth: true, roles: null, type: 'device' },
   'audit-log': { el: 'page-audit-log', auth: true, roles: ['ADMIN'] },
+  'absen-manual': { el: 'page-absen-manual', auth: true, roles: ['ADMIN','AKUNTAN','USER'] },
 };
 
 function navigateTo(page) {
@@ -911,7 +957,7 @@ function navigateTo(page) {
     'login': 'Login', 'register': 'Register', 'dashboard': 'Dashboard',
     'profil': 'Profil', 'manajemen-user': 'Manajemen User', 'data-karyawan': 'Data Karyawan',
     'payroll': 'Payroll', 'my-payroll': 'My Payroll', 'absensi': 'Data Absensi',
-    'device-absen': 'Absensi', 'audit-log': 'Catatan Aktivitas'
+    'device-absen': 'Absensi', 'audit-log': 'Catatan Aktivitas', 'absen-manual': 'Absen'
   };
   $('#page-title').textContent = titles[page] || '';
 
@@ -929,6 +975,7 @@ function navigateTo(page) {
   if(page === 'absensi') initAbsensi();
   if(page === 'device-absen') initDeviceAbsen();
   if(page === 'audit-log') initAuditLog();
+  if(page === 'absen-manual') initAbsenManual();
   if(page === 'register') initRegister();
 }
 
@@ -2088,13 +2135,25 @@ async function restartQrScanner(newCameraId) {
 }
 
 function applyUserUI() {
-  if(!AppState.user) return;
+  if(!AppState.user && !AppState.device) return;
+
+  if(AppState.device) {
+    // Mode device: sembunyikan seluruh nav kecuali Logout
+    $('#sidebar-nama').textContent = AppState.device.namaDevice || 'Device';
+    $('#sidebar-role').textContent = 'DEVICE ABSEN';
+    $('#header-nama').textContent = AppState.device.namaDevice || '';
+    $$('.nav-item[data-page]').forEach(n => n.classList.add('hidden'));
+    return;
+  }
+
   $('#sidebar-nama').textContent = AppState.user.nama || '-';
   $('#sidebar-role').textContent = AppState.user.role || '-';
   $('#header-nama').textContent = AppState.user.nama || '';
   if(AppState.user.fotoProfil) $('#sidebar-foto').src = AppState.user.fotoProfil;
 
   const role = AppState.user.role;
+  // Reset semua dulu
+  $$('.nav-item[data-page]').forEach(n => n.classList.remove('hidden'));
   $$('.nav-item.admin-only').forEach(n => n.classList.toggle('hidden', role !== 'ADMIN'));
   $$('.nav-item.akuntan-only').forEach(n => n.classList.toggle('hidden', !(role === 'ADMIN' || role === 'AKUNTAN')));
 }
@@ -2186,6 +2245,113 @@ function showDeviceResult(success, message) {
   setTimeout(() => {
     resetDeviceFlow();
   }, 5000);
+}
+
+// ==================== ABSEN MANUAL (user login biasa) ====================
+let absenQrScanner = null;
+let absenIdUser = null;
+let absenFaceDescriptor = null;
+
+function initAbsenManual() {
+  resetAbsenFlow();
+  function updateAbsenClock() {
+    const now = new Date();
+    const c = $('#absen-clock'); const d = $('#absen-date');
+    if(c) c.textContent = now.toLocaleTimeString('id-ID', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    if(d) d.textContent = now.toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+  }
+  updateAbsenClock();
+  if(window._absenClockInterval) clearInterval(window._absenClockInterval);
+  window._absenClockInterval = setInterval(updateAbsenClock, 1000);
+
+  $('#btn-absen-manual').addEventListener('click', startAbsenFlow);
+  $('#btn-absen-qr-cancel').addEventListener('click', resetAbsenFlow);
+  $('#btn-absen-face-cancel').addEventListener('click', resetAbsenFlow);
+  $('#btn-absen-result-ok').addEventListener('click', resetAbsenFlow);
+}
+
+function resetAbsenFlow() {
+  absenIdUser = null; absenFaceDescriptor = null;
+  stopVideo();
+  if(absenQrScanner) { try { absenQrScanner.stop().catch(()=>{}); absenQrScanner.clear(); } catch(e){} absenQrScanner = null; }
+  $('#absen-step-idle').classList.remove('hidden');
+  $('#absen-step-qr').classList.add('hidden');
+  $('#absen-step-face').classList.add('hidden');
+  $('#absen-step-result').classList.add('hidden');
+}
+
+async function startAbsenFlow() {
+  $('#absen-step-idle').classList.add('hidden');
+  $('#absen-step-qr').classList.remove('hidden');
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showAlert('Browser tidak mendukung akses kamera. Gunakan HTTPS dan browser modern.'); resetAbsenFlow(); return;
+  }
+  let cameras = [];
+  try { cameras = await Html5Qrcode.getCameras(); } catch(e) { showAlert('Gagal akses kamera: ' + getErrorMessage(e)); resetAbsenFlow(); return; }
+  if(!cameras || cameras.length === 0) { showAlert('Tidak ada kamera terdeteksi.'); resetAbsenFlow(); return; }
+  const sel = $('#absen-qr-cam-select');
+  const backIdx = cameras.findIndex(c => /back|rear|environment/i.test(c.label||''));
+  const defIdx = backIdx >= 0 ? backIdx : 0;
+  sel.innerHTML = cameras.map((c,i) => { let l = c.label||`Kamera ${i+1}`; if(/back|rear|environment/i.test(l)) l+=' (Belakang)'; else if(/front|user|face/i.test(l)) l+=' (Depan)'; return `<option value="${i}" ${i===defIdx?'selected':''}>${escapeHtml(l)}</option>`; }).join('');
+  $('#absen-qr-cam-group').classList.toggle('hidden', cameras.length <= 1);
+  await startAbsenQrCamera(cameras[defIdx].id, cameras);
+  sel.onchange = () => { const c = cameras[parseInt(sel.value)]; if(c) restartAbsenQr(c.id, cameras); };
+}
+
+async function startAbsenQrCamera(cameraId, cameras) {
+  try {
+    const qr = new Html5Qrcode('absen-qr-video');
+    absenQrScanner = qr;
+    await qr.start(cameraId, {fps:10, qrbox:{width:250,height:250}}, (decoded) => { qr.stop(); handleAbsenQrScanned(decoded, cameras); }, ()=>{});
+  } catch(e) { showAlert('Gagal QR scanner: ' + getErrorMessage(e)); resetAbsenFlow(); }
+}
+
+async function restartAbsenQr(cameraId, cameras) {
+  if(absenQrScanner) { try { await absenQrScanner.stop(); absenQrScanner.clear(); } catch(e){} absenQrScanner = null; }
+  await startAbsenQrCamera(cameraId, cameras);
+}
+
+async function handleAbsenQrScanned(idCardUnik, cameras) {
+  try {
+    const res = await apiCallWithToken('lookupUserByIdCard', { idCardUnik });
+    if(!res.found) { showAbsenResult(false, 'ID Card tidak valid'); return; }
+    absenIdUser = res.user.idUser; absenFaceDescriptor = res.user.faceDescriptor;
+    $('#absen-step-qr').classList.add('hidden');
+    $('#absen-step-face').classList.remove('hidden');
+    startAbsenFaceScan();
+  } catch(e) { showAbsenResult(false, 'Error: ' + getErrorMessage(e)); }
+}
+
+async function startAbsenFaceScan() {
+  if(!AppState.modelsLoaded) await loadFaceApiModels();
+  const video = $('#absen-face-video');
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+    AppState.videoStream = stream; video.srcObject = stream; video.play();
+    let attempts = 0;
+    const interval = setInterval(async () => {
+      attempts++;
+      const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({inputSize:416, scoreThreshold:0.5})).withFaceLandmarks().withFaceDescriptor();
+      if(det && absenFaceDescriptor) {
+        const skor = (1 - faceapi.euclideanDistance(det.descriptor, new Float32Array(absenFaceDescriptor))) * 100;
+        if(skor > FACE_MATCH_THRESHOLD) {
+          clearInterval(interval); stopVideo();
+          const res2 = await apiCallWithToken('recordAbsensi', { idUser: absenIdUser, skorKecocokan: skor/100, statusValidasi: 'VALID' });
+          showAbsenResult(true, `${res2.nama} - ${res2.message} (${res2.waktu})`);
+        } else { $('#absen-face-status').textContent = `Skor: ${skor.toFixed(1)}% - Wajah tidak cocok, coba lagi...`; }
+      }
+      if(attempts > 60) { clearInterval(interval); stopVideo(); showAbsenResult(false, 'Wajah tidak terverifikasi. Silakan coba lagi.'); }
+    }, 500);
+  } catch(e) { showAbsenResult(false, 'Gagal akses kamera: ' + e.message); }
+}
+
+function showAbsenResult(success, message) {
+  $('#absen-step-face').classList.add('hidden'); $('#absen-step-qr').classList.add('hidden');
+  $('#absen-step-result').classList.remove('hidden');
+  $('#absen-result-icon').textContent = success ? '✅' : '❌';
+  $('#absen-result-text').textContent = success ? message : ('⚠️ ' + message);
+  $('#absen-result-text').className = success ? 'text-success' : 'text-danger';
+  setTimeout(resetAbsenFlow, 5000);
 }
 
 // ==================== AUDIT LOG ====================
