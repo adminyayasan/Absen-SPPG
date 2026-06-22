@@ -613,6 +613,10 @@
           <!-- Step QR -->
           <div id="device-step-qr" class="hidden">
             <div class="card-title mb-2" style="font-size:1.5rem;">📷 Scan QR Code ID Card</div>
+            <div class="form-group" id="qr-camera-select-group" style="max-width:400px; margin:0 auto 1rem;">
+              <label class="form-label">Pilih Kamera</label>
+              <select id="qr-camera-select" class="form-select"></select>
+            </div>
             <div class="camera-container">
               <div id="device-qr-video" style="width:100%; max-width:400px;"></div>
             </div>
@@ -1909,26 +1913,32 @@ function resetDeviceFlow() {
   deviceIdUser = null;
   deviceFaceDescriptor = null;
   stopVideo();
+  if (AppState.qrScanner) {
+    try { AppState.qrScanner.stop().catch(()=>{}); AppState.qrScanner.clear(); } catch(e) {}
+    AppState.qrScanner = null;
+  }
   $('#device-step-idle').classList.remove('hidden');
   $('#device-step-qr').classList.add('hidden');
   $('#device-step-face').classList.add('hidden');
   $('#device-step-result').classList.add('hidden');
 }
 
+// Helper: ambil pesan error yang jelas dari berbagai bentuk error
+// (Error object, string, DOMException, atau object custom dari library)
+function getErrorMessage(err) {
+  if (!err) return 'Error tidak diketahui (kosong)';
+  if (typeof err === 'string') return err;
+  if (err.message) return err.message;
+  if (err.name) return err.name;
+  try { return JSON.stringify(err); } catch(e2) { return String(err); }
+}
+
+let availableCameras = [];
+
 async function startDeviceFlow() {
   deviceStep = 'qr';
   $('#device-step-idle').classList.add('hidden');
   $('#device-step-qr').classList.remove('hidden');
-
-  // Helper: ambil pesan error yang jelas dari berbagai bentuk error
-  // (Error object, string, DOMException, atau object custom dari library)
-  function getErrorMessage(err) {
-    if (!err) return 'Error tidak diketahui (kosong)';
-    if (typeof err === 'string') return err;
-    if (err.message) return err.message;
-    if (err.name) return err.name;
-    try { return JSON.stringify(err); } catch(e2) { return String(err); }
-  }
 
   // Cek dulu apakah browser punya akses ke API kamera sama sekali
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -1937,34 +1947,52 @@ async function startDeviceFlow() {
     return;
   }
 
-  // Cek daftar kamera yang tersedia sebelum mencoba start scanner
-  let cameras = [];
+  // Cek daftar kamera yang tersedia
   try {
-    cameras = await Html5Qrcode.getCameras();
+    availableCameras = await Html5Qrcode.getCameras();
   } catch (e) {
     showAlert('Gagal mendapatkan daftar kamera: ' + getErrorMessage(e) + '. Pastikan izin kamera diberikan ke browser ini di Settings.');
     resetDeviceFlow();
     return;
   }
 
-  if (!cameras || cameras.length === 0) {
+  if (!availableCameras || availableCameras.length === 0) {
     showAlert('Tidak ada kamera yang terdeteksi di perangkat ini.');
     resetDeviceFlow();
     return;
   }
 
-  // Pilih kamera: cari yang namanya mengindikasikan "back/rear/environment",
-  // kalau tidak ada fallback ke kamera pertama yang tersedia.
-  let chosenCameraId = cameras[0].id;
-  const backCamera = cameras.find(c => /back|rear|environment/i.test(c.label || ''));
-  if (backCamera) chosenCameraId = backCamera.id;
+  // Isi dropdown pilihan kamera. Default terpilih: kamera belakang kalau ada,
+  // kalau tidak ada fallback ke kamera pertama.
+  const select = $('#qr-camera-select');
+  const backIndex = availableCameras.findIndex(c => /back|rear|environment/i.test(c.label || ''));
+  const defaultIndex = backIndex >= 0 ? backIndex : 0;
 
-  // Start QR scanner
+  select.innerHTML = availableCameras.map((c, i) => {
+    let label = c.label || `Kamera ${i + 1}`;
+    if (/back|rear|environment/i.test(label)) label += ' (Belakang)';
+    else if (/front|user|face/i.test(label)) label += ' (Depan)';
+    return `<option value="${i}" ${i === defaultIndex ? 'selected' : ''}>${escapeHtml(label)}</option>`;
+  }).join('');
+
+  // Tampilkan dropdown hanya kalau ada lebih dari 1 kamera
+  $('#qr-camera-select-group').classList.toggle('hidden', availableCameras.length <= 1);
+
+  // Mulai scanner dengan kamera default. Kalau user ganti pilihan, scanner di-restart.
+  await startQrScannerWithCamera(availableCameras[defaultIndex].id);
+
+  select.onchange = () => {
+    const chosen = availableCameras[parseInt(select.value)];
+    if (chosen) restartQrScanner(chosen.id);
+  };
+}
+
+async function startQrScannerWithCamera(cameraId) {
   try {
     const html5QrCode = new Html5Qrcode('device-qr-video');
     AppState.qrScanner = html5QrCode;
     await html5QrCode.start(
-      chosenCameraId,
+      cameraId,
       { fps: 10, qrbox: { width: 250, height: 250 } },
       (decodedText) => {
         html5QrCode.stop();
@@ -1977,6 +2005,17 @@ async function startDeviceFlow() {
     showAlert('Gagal memulai QR scanner: ' + getErrorMessage(e) + '. Coba: (1) izinkan akses kamera di browser, (2) pastikan tidak ada app lain yang memakai kamera, (3) refresh halaman.');
     resetDeviceFlow();
   }
+}
+
+async function restartQrScanner(newCameraId) {
+  if (AppState.qrScanner) {
+    try {
+      await AppState.qrScanner.stop();
+      AppState.qrScanner.clear();
+    } catch(e) {}
+    AppState.qrScanner = null;
+  }
+  await startQrScannerWithCamera(newCameraId);
 }
 
 function applyUserUI() {
@@ -2008,6 +2047,8 @@ async function handleQrScanned(idCardUnik) {
   }
 }
 
+const FACE_MATCH_THRESHOLD = 60; // persen kecocokan minimum agar absensi dianggap VALID
+
 async function startFaceScan() {
   if(!AppState.modelsLoaded) await loadFaceApiModels();
   const video = $('#device-face-video');
@@ -2028,7 +2069,7 @@ async function startFaceScan() {
         const distance = faceapi.euclideanDistance(currentDesc, refDesc);
         const skor = (1 - distance) * 100;
 
-        if(skor > 70) {
+        if(skor > FACE_MATCH_THRESHOLD) {
           clearInterval(interval);
           stopVideo();
           await recordAbsensi(deviceIdUser, skor, 'VALID');
@@ -2051,21 +2092,25 @@ async function startFaceScan() {
 async function recordAbsensi(idUser, skor, status) {
   try {
     const res = await apiCallWithToken('recordAbsensi', { idUser, skorKecocokan: skor / 100, statusValidasi: status });
-    if(res.success) {
+    if(res.success && status === 'VALID') {
       showDeviceResult(true, `${res.nama} - ${res.message} (${res.waktu})`);
+    } else if (res.success && status === 'GAGAL') {
+      // Tercatat di sheet tapi statusnya gagal validasi wajah
+      showDeviceResult(false, 'Absensi tidak berhasil. Wajah tidak terverifikasi (skor di bawah ' + FACE_MATCH_THRESHOLD + '%). Silakan coba lagi.');
     } else {
-      showDeviceResult(false, res.message);
+      showDeviceResult(false, res.message || 'Absensi tidak berhasil.');
     }
   } catch(e) {
-    showDeviceResult(false, 'Error: ' + e);
+    showDeviceResult(false, 'Absensi tidak berhasil. ' + getErrorMessage(e));
   }
 }
 
 function showDeviceResult(success, message) {
   $('#device-step-face').classList.add('hidden');
+  $('#device-step-qr').classList.add('hidden');
   $('#device-step-result').classList.remove('hidden');
   $('#device-result-icon').textContent = success ? '✅' : '❌';
-  $('#device-result-text').textContent = message;
+  $('#device-result-text').textContent = success ? message : ('⚠️ ' + message);
   $('#device-result-text').className = success ? 'text-success' : 'text-danger';
 
   // Auto reset after 5 seconds
