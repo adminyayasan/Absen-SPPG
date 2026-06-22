@@ -1,298 +1,1304 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="antialiased">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f172a">
   <title>Sistem Absensi Multi-User</title>
+  
   <!-- Libraries -->
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.7/dist/signature_pad.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  
   <style>
-  :root {
-    --primary: #2563eb;
-    --primary-dark: #1d4ed8;
-    --secondary: #64748b;
-    --success: #22c55e;
-    --danger: #ef4444;
-    --warning: #f59e0b;
-    --bg: #f8fafc;
-    --card-bg: #ffffff;
-    --text: #1e293b;
-    --text-muted: #64748b;
-    --border: #e2e8f0;
-    --sidebar-width: 260px;
-    --header-height: 60px;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body { height: 100%; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; }
-
-  /* Layout */
-  #app, #app-layout { display: flex; min-height: 100vh; }
-  #sidebar {
-    width: var(--sidebar-width); background: #0f172a; color: white;
-    position: fixed; top: 0; left: 0; height: 100vh; z-index: 1000;
-    transform: translateX(-100%); transition: transform 0.3s ease, width 0.25s ease;
-    overflow-y: auto; padding: 1rem 0; overflow-x: hidden;
-    box-shadow: 4px 0 24px rgba(0,0,0,0.25);
-  }
-  #sidebar.open { transform: translateX(0); }
-  #sidebar-overlay {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999;
-  }
-  #sidebar-overlay.show { display: block; }
-  .sidebar-brand { padding: 0 1.5rem 1.5rem; font-size: 1.25rem; font-weight: 700; border-bottom: 1px solid #334155; margin-bottom: 1rem; }
-  .sidebar-user { padding: 0 1.5rem 1rem; border-bottom: 1px solid #334155; margin-bottom: 1rem; }
-  .sidebar-user img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; margin-bottom: 0.5rem; background: #334155; }
-  .sidebar-user .name { font-weight: 600; font-size: 0.95rem; }
-  .sidebar-user .role { font-size: 0.75rem; color: #94a3b8; text-transform: uppercase; }
-  .nav-item { display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem 1.5rem; cursor: pointer; transition: background 0.2s; color: #cbd5e1; text-decoration: none; }
-  .nav-item:hover, .nav-item.active { background: #1e293b; color: white; }
-  .nav-item i { width: 20px; text-align: center; }
-
-  #main-content { flex: 1; margin-left: 0; transition: margin-left 0.3s; min-height: 100vh; }
-  #header {
-    height: var(--header-height); background: var(--card-bg); border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem;
-    position: sticky; top: 0; z-index: 50;
-    width: 100%;
-  }
-  #main-content { width: 100%; min-width: 0; }
-  #header .menu-btn { background: none; border: none; font-size: 1.25rem; cursor: pointer; color: var(--text); display: flex; align-items: center; }
-  .page-title { font-size: 1.1rem; font-weight: 600; }
-
-  #content-area { padding: 1.5rem; max-width: 1400px; margin: 0 auto; }
-
-  /* Cards & Grid */
-  .card { background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); padding: 1.5rem; margin-bottom: 1rem; }
-  .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
-  .card-title { font-size: 1rem; font-weight: 600; }
-  .grid { display: grid; gap: 1rem; }
-  .grid-2 { grid-template-columns: repeat(1, 1fr); }
-  .grid-3 { grid-template-columns: repeat(1, 1fr); }
-  .grid-4 { grid-template-columns: repeat(1, 1fr); }
-  @media (min-width: 640px) { .grid-2 { grid-template-columns: repeat(2, 1fr); } .grid-3 { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 1024px) { .grid-3 { grid-template-columns: repeat(3, 1fr); } .grid-4 { grid-template-columns: repeat(4, 1fr); } }
-
-  /* Stats */
-  .stat-card { display: flex; align-items: center; gap: 1rem; }
-  .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
-  .stat-icon.blue { background: #dbeafe; color: var(--primary); }
-  .stat-icon.green { background: #dcfce7; color: var(--success); }
-  .stat-icon.orange { background: #fef3c7; color: var(--warning); }
-  .stat-icon.red { background: #fee2e2; color: var(--danger); }
-  .stat-value { font-size: 1.5rem; font-weight: 700; }
-  .stat-label { font-size: 0.875rem; color: var(--text-muted); }
-
-  /* Forms */
-  .form-group { margin-bottom: 1rem; }
-  .form-label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.375rem; }
-  .form-input, .form-select, .form-textarea {
-    width: 100%; padding: 0.625rem 0.875rem; border: 1px solid var(--border); border-radius: 8px;
-    font-size: 0.875rem; font-family: inherit; background: var(--card-bg); color: var(--text);
-  }
-  .form-input:focus, .form-select:focus, .form-textarea:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.1); }
-  .form-input:disabled, .form-select:disabled { background: #f1f5f9; color: var(--text-muted); cursor: not-allowed; }
-  .form-row { display: grid; gap: 1rem; grid-template-columns: 1fr; }
-  @media (min-width: 640px) { .form-row-2 { grid-template-columns: 1fr 1fr; } .form-row-3 { grid-template-columns: 1fr 1fr 1fr; } }
-
-  /* Buttons */
-  .btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
-    padding: 0.625rem 1.25rem; border-radius: 8px; font-size: 0.875rem; font-weight: 500;
-    border: none; cursor: pointer; transition: all 0.2s; font-family: inherit;
-  }
-  .btn-primary { background: var(--primary); color: white; }
-  .btn-primary:hover { background: var(--primary-dark); }
-  .btn-success { background: var(--success); color: white; }
-  .btn-danger { background: var(--danger); color: white; }
-  .btn-warning { background: var(--warning); color: white; }
-  .btn-secondary { background: var(--secondary); color: white; }
-  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text); }
-  .btn-outline:hover { background: var(--bg); }
-  .btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
-  .btn-lg { padding: 0.875rem 1.75rem; font-size: 1rem; }
-  .btn-block { width: 100%; }
-  .btn:disabled { opacity: 0.6; cursor: not-allowed; }
-
-  /* Tables */
-  .table-container { overflow-x: auto; }
-  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-  .data-table th { text-align: left; padding: 0.75rem 1rem; background: #f8fafc; font-weight: 600; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
-  .data-table td { padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); }
-  .data-table tr:hover td { background: #f8fafc; }
-  .data-table .actions { display: flex; gap: 0.5rem; }
-
-  /* User Cards Grid */
-  .user-card-grid { display: grid; gap: 1rem; grid-template-columns: repeat(1, 1fr); }
-  @media (min-width: 640px) { .user-card-grid { grid-template-columns: repeat(2, 1fr); } }
-  @media (min-width: 1024px) { .user-card-grid { grid-template-columns: repeat(3, 1fr); } }
-  .user-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; cursor: pointer; transition: box-shadow 0.2s; }
-  .user-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-  .user-card-img { width: 100%; height: 160px; object-fit: cover; background: #e2e8f0; }
-  .user-card-body { padding: 1rem; }
-  .user-card-name { font-weight: 600; font-size: 0.95rem; margin-bottom: 0.25rem; }
-  .user-card-role { font-size: 0.8rem; color: var(--text-muted); }
-
-  /* Modal */
-  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
-  .modal-overlay.show { display: flex; }
-  .modal { background: var(--card-bg); border-radius: 16px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; }
-  .modal-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-  .modal-title { font-size: 1.1rem; font-weight: 600; }
-  .modal-close { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--text-muted); }
-  .modal-body { padding: 1.5rem; }
-  .modal-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 0.75rem; }
-  .modal-lg { max-width: 900px; }
-  .modal-xl { max-width: 1100px; }
-
-  /* Alerts / Toast */
-  .alert { padding: 0.875rem 1rem 0.5rem; border-radius: 10px; margin-bottom: 0.5rem; font-size: 0.875rem; display: flex; align-items: flex-start; gap: 0.625rem; box-shadow: 0 4px 16px rgba(0,0,0,0.12); animation: slideInRight 0.3s ease; position: relative; overflow: hidden; }
-  .alert-success { background: #f0fdf4; color: #166534; border: 1px solid #86efac; }
-  .alert-danger { background: #fff1f2; color: #991b1b; border: 1px solid #fca5a5; }
-  .alert-warning { background: #fffbeb; color: #92400e; border: 1px solid #fcd34d; }
-  .alert-info { background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; }
-  .alert-icon { font-size: 1rem; flex-shrink: 0; margin-top: 1px; }
-  .alert-body { flex: 1; }
-  .alert-msg { line-height: 1.4; margin-bottom: 0.375rem; }
-  .alert-progress { height: 3px; border-radius: 0 0 10px 10px; position: absolute; bottom: 0; left: 0; animation: alertProgress 5s linear forwards; }
-  .alert-success .alert-progress { background: #22c55e; }
-  .alert-danger .alert-progress { background: #ef4444; }
-  .alert-warning .alert-progress { background: #f59e0b; }
-  .alert-info .alert-progress { background: #3b82f6; }
-  @keyframes slideInRight { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-  @keyframes alertProgress { from { width: 100%; } to { width: 0%; } }
-
-  /* Loading */
-  .loading-overlay { display: none; position: fixed; inset: 0; background: rgba(255,255,255,0.8); z-index: 300; align-items: center; justify-content: center; flex-direction: column; gap: 1rem; }
-  .loading-overlay.show { display: flex; }
-  .spinner { width: 40px; height: 40px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Face/QR Camera */
-  .camera-container { position: relative; width: 100%; max-width: 400px; margin: 0 auto; }
-  .camera-container video { width: 100%; border-radius: 12px; display: block; }
-  .face-guide { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 200px; height: 260px; border: 3px dashed rgba(255,255,255,0.7); border-radius: 50%; pointer-events: none; }
-  .qr-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: 2px solid var(--primary); border-radius: 12px; }
-
-  /* Signature Pad */
-  .signature-pad-container { border: 2px dashed var(--border); border-radius: 8px; background: #fafafa; }
-  .signature-pad-container canvas { width: 100%; height: 200px; display: block; }
-
-  /* ID Card Preview */
-  .id-card-preview { width: 344px; height: 216px; background: white; border: 1px solid #ccc; border-radius: 12px; padding: 1rem; margin: 0 auto; position: relative; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  .id-card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
-  .id-card-photo { width: 60px; height: 60px; border-radius: 50%; object-fit: cover; background: #e2e8f0; }
-  .id-card-info { flex: 1; }
-  .id-card-name { font-weight: 700; font-size: 0.9rem; }
-  .id-card-role { font-size: 0.75rem; color: var(--text-muted); }
-  .id-card-qr { position: absolute; bottom: 1rem; right: 1rem; }
-  .id-card-sppg { position: absolute; bottom: 1rem; left: 1rem; font-size: 0.7rem; color: var(--text-muted); }
-
-  /* Device UI */
-  .device-ui { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; padding: 2rem; text-align: center; gap: 1.5rem; }
-  .device-btn-wrap { position: relative; display: inline-flex; align-items: center; justify-content: center; }
-  .device-btn-pulse { position: absolute; width: 200px; height: 200px; border-radius: 50%; background: rgba(37,99,235,0.15); animation: pulseBig 2s ease-in-out infinite; pointer-events: none; }
-  .device-btn-pulse2 { animation-delay: 0.6s; }
-  @keyframes pulseBig { 0%,100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.25); opacity: 0; } }
-  .device-btn-absen { position: relative; z-index: 1; width: 180px; height: 180px; border-radius: 50%; background: var(--primary); color: white; font-size: 1.25rem; font-weight: 700; border: 4px solid rgba(255,255,255,0.25); cursor: pointer; box-shadow: 0 8px 32px rgba(37,99,235,0.35); transition: transform 0.15s, box-shadow 0.15s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.375rem; }
-  .device-btn-absen:hover { transform: scale(1.05); box-shadow: 0 12px 40px rgba(37,99,235,0.45); }
-  .device-btn-absen:active { transform: scale(0.94); }
-  .device-btn-absen .btn-icon { font-size: 2.5rem; line-height: 1; }
-  .device-btn-absen .btn-label { font-size: 0.875rem; letter-spacing: 0.15em; text-transform: uppercase; opacity: 0.9; }
-  .device-status { font-size: 1rem; font-weight: 500; color: var(--text-muted); background: var(--card-bg); border: 1px solid var(--border); border-radius: 999px; padding: 0.5rem 1.25rem; }
-  .device-time { font-size: 2.5rem; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
-  .device-date { font-size: 0.95rem; color: var(--text-muted); }
-
-  /* Utilities */
-  .hidden { display: none !important; }
-  .text-center { text-align: center; }
-  .text-right { text-align: right; }
-  .text-muted { color: var(--text-muted); }
-  .text-success { color: var(--success); }
-  .text-danger { color: var(--danger); }
-  .mb-1 { margin-bottom: 0.5rem; }
-  .mb-2 { margin-bottom: 1rem; }
-  .mt-2 { margin-top: 1rem; }
-  .flex { display: flex; }
-  .flex-between { justify-content: space-between; }
-  .items-center { align-items: center; }
-  .gap-1 { gap: 0.5rem; }
-  .gap-2 { gap: 1rem; }
-  .w-full { width: 100%; }
-
-  /* Checkbox */
-  .checkbox-row { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
-  .checkbox-row input { width: 18px; height: 18px; accent-color: var(--primary); }
-
-  /* Responsive sidebar desktop */
-  @media (min-width: 1024px) {
-    #app, #app-layout { flex-direction: row; align-items: flex-start; }
-
-    #sidebar {
-      position: sticky !important;
-      top: 0 !important;
-      left: auto !important;
-      transform: none !important;
-      height: 100vh;
-      flex-shrink: 0;
-      width: var(--sidebar-width);
-      transition: width 0.25s ease;
-      overflow-x: hidden;
-      overflow-y: auto;
-      z-index: 10;
+    :root {
+      --primary: #3b82f6;
+      --primary-dark: #2563eb;
+      --primary-light: #dbeafe;
+      --secondary: #64748b;
+      --success: #10b981;
+      --success-light: #d1fae5;
+      --danger: #ef4444;
+      --danger-light: #fee2e2;
+      --warning: #f59e0b;
+      --warning-light: #fef3c7;
+      --info: #06b6d4;
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface-raised: #ffffff;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --border: #e2e8f0;
+      --border-light: #f1f5f9;
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+      --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+      --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+      --radius-sm: 0.5rem;
+      --radius: 0.75rem;
+      --radius-lg: 1rem;
+      --radius-xl: 1.5rem;
+      --sidebar-width: 280px;
+      --sidebar-collapsed: 72px;
+      --header-height: 64px;
+      --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
-    #sidebar.collapsed { width: 64px; }
 
-    /* Sembunyikan teks saat collapsed */
-    #sidebar.collapsed .sidebar-brand-text { display: none; }
-    #sidebar.collapsed .sidebar-user .name,
-    #sidebar.collapsed .sidebar-user .role { display: none; }
-    #sidebar.collapsed .nav-item { justify-content: center; padding: 0.75rem; gap: 0; }
-    #sidebar.collapsed .nav-item-text { display: none; }
-    #sidebar.collapsed .sidebar-brand { text-align: center; padding: 0 0.5rem 1.5rem; }
-    #sidebar.collapsed .sidebar-user { text-align: center; padding: 0 0.5rem 1rem; }
-    #sidebar.collapsed .sidebar-user img { margin: 0 auto 0.25rem; width: 36px; height: 36px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    html, body { 
+      height: 100%; 
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); 
+      color: var(--text); 
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
 
-    #main-content { flex: 1; min-width: 0; margin-left: 0; }
-    #header .menu-btn { display: flex !important; }
-    #sidebar-overlay { display: none !important; }
-  }
-  .nav-item { position: relative; }
-  .nav-item.active::before { content: ''; position: absolute; left: 0; top: 20%; height: 60%; width: 3px; background: #60a5fa; border-radius: 0 3px 3px 0; }
-  .nav-item.active { background: #1e293b; color: white; }
+    /* Scrollbar Modern */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-  /* Login/Register pages */
-  .auth-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); }
-  .auth-card { background: var(--card-bg); border-radius: 16px; padding: 2rem; width: 100%; max-width: 480px; box-shadow: 0 20px 40px rgba(0,0,0,0.2); }
-  .auth-logo { text-align: center; margin-bottom: 1.5rem; font-size: 1.5rem; font-weight: 700; color: var(--primary); }
-  .auth-footer { text-align: center; margin-top: 1rem; font-size: 0.875rem; color: var(--text-muted); }
-  .auth-footer a { color: var(--primary); text-decoration: none; cursor: pointer; }
+    /* ==================== LAYOUT ==================== */
+    #app-layout { display: flex; min-height: 100vh; }
+    
+    #sidebar {
+      width: var(--sidebar-width);
+      background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%);
+      color: white;
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      z-index: 1000;
+      transform: translateX(-100%);
+      transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s ease;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 1.5rem 0;
+      box-shadow: 4px 0 24px rgba(0,0,0,0.15);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #sidebar.open { transform: translateX(0); }
+    
+    #sidebar-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 999;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    #sidebar-overlay.show { 
+      display: block; 
+      opacity: 1;
+    }
 
-  /* Progress bar */
-  .progress-bar { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; margin-bottom: 1rem; }
-  .progress-bar-fill { height: 100%; background: var(--primary); transition: width 0.3s; }
+    .sidebar-brand { 
+      padding: 0 1.5rem 1.5rem; 
+      font-size: 1.25rem; 
+      font-weight: 700; 
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      letter-spacing: -0.025em;
+    }
+    
+    .sidebar-brand-icon {
+      width: 36px;
+      height: 36px;
+      background: var(--primary);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      flex-shrink: 0;
+    }
+    
+    .sidebar-user { 
+      padding: 0 1.5rem 1.25rem; 
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.875rem;
+    }
+    
+    .sidebar-user img { 
+      width: 44px; 
+      height: 44px; 
+      border-radius: 50%; 
+      object-fit: cover; 
+      background: #334155;
+      border: 2px solid rgba(255,255,255,0.1);
+      flex-shrink: 0;
+    }
+    
+    .sidebar-user .name { 
+      font-weight: 600; 
+      font-size: 0.9375rem;
+      line-height: 1.25;
+      color: white;
+    }
+    
+    .sidebar-user .role { 
+      font-size: 0.75rem; 
+      color: #94a3b8; 
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 500;
+    }
 
-  /* Badge */
-  .badge { display: inline-block; padding: 0.25rem 0.5rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
-  .badge-green { background: #dcfce7; color: #166534; }
-  .badge-red { background: #fee2e2; color: #991b1b; }
-  .badge-blue { background: #dbeafe; color: #1e40af; }
-  .badge-gray { background: #f1f5f9; color: #475569; }
-</style>
-<base target="_blank">
+    .nav-section {
+      padding: 0 0.75rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      flex: 1;
+    }
+    
+    .nav-item { 
+      display: flex; 
+      align-items: center; 
+      gap: 0.875rem; 
+      padding: 0.75rem 1rem; 
+      cursor: pointer; 
+      transition: var(--transition);
+      color: #cbd5e1; 
+      text-decoration: none;
+      border-radius: var(--radius);
+      margin-bottom: 0.125rem;
+      font-weight: 500;
+      font-size: 0.875rem;
+      position: relative;
+      white-space: nowrap;
+    }
+    
+    .nav-item:hover { 
+      background: rgba(255,255,255,0.08); 
+      color: white; 
+    }
+    
+    .nav-item.active { 
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+    }
+    
+    .nav-item.active::before {
+      content: '';
+      position: absolute;
+      left: -0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 3px;
+      height: 24px;
+      background: #60a5fa;
+      border-radius: 0 3px 3px 0;
+    }
+    
+    .nav-item i { 
+      width: 20px; 
+      text-align: center;
+      font-size: 1.125rem;
+      flex-shrink: 0;
+    }
+    
+    .nav-item.logout {
+      margin-top: auto;
+      color: #fca5a5;
+    }
+    
+    .nav-item.logout:hover {
+      background: rgba(239, 68, 68, 0.15);
+      color: #fca5a5;
+    }
+
+    #main-content { 
+      flex: 1; 
+      margin-left: 0; 
+      transition: margin-left 0.3s ease;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    #header {
+      height: var(--header-height);
+      background: rgba(255, 255, 255, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.25rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      width: 100%;
+    }
+    
+    #header .menu-btn { 
+      background: none; 
+      border: none; 
+      font-size: 1.25rem; 
+      cursor: pointer; 
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      border-radius: var(--radius);
+      transition: var(--transition);
+    }
+    
+    #header .menu-btn:hover { background: var(--bg); }
+    
+    .page-title { 
+      font-size: 1.125rem; 
+      font-weight: 600;
+      letter-spacing: -0.025em;
+    }
+
+    #content-area { 
+      padding: 1.25rem; 
+      max-width: 1400px; 
+      margin: 0 auto;
+      width: 100%;
+      flex: 1;
+    }
+
+    /* ==================== CARDS & GRID ==================== */
+    .card { 
+      background: var(--surface); 
+      border-radius: var(--radius-lg); 
+      border: 1px solid var(--border); 
+      padding: 1.5rem; 
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+    }
+    
+    .card:hover {
+      box-shadow: var(--shadow);
+      border-color: #e2e8f0;
+    }
+    
+    .card-header { 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center; 
+      margin-bottom: 1.25rem;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    
+    .card-title { 
+      font-size: 1rem; 
+      font-weight: 600;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .grid { 
+      display: grid; 
+      gap: 1.25rem; 
+    }
+    
+    .grid-2 { grid-template-columns: repeat(1, 1fr); }
+    .grid-3 { grid-template-columns: repeat(1, 1fr); }
+    .grid-4 { grid-template-columns: repeat(1, 1fr); }
+    
+    @media (min-width: 640px) { 
+      .grid-2 { grid-template-columns: repeat(2, 1fr); } 
+      .grid-3 { grid-template-columns: repeat(2, 1fr); } 
+    }
+    
+    @media (min-width: 1024px) { 
+      .grid-3 { grid-template-columns: repeat(3, 1fr); } 
+      .grid-4 { grid-template-columns: repeat(4, 1fr); } 
+    }
+
+    /* ==================== STATS ==================== */
+    .stat-card { 
+      display: flex; 
+      align-items: center; 
+      gap: 1rem; 
+      padding: 1.25rem;
+    }
+    
+    .stat-icon { 
+      width: 48px; 
+      height: 48px; 
+      border-radius: 12px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    
+    .stat-icon.blue { background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%); color: #2563eb; }
+    .stat-icon.green { background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%); color: #059669; }
+    .stat-icon.orange { background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); color: #d97706; }
+    .stat-icon.red { background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); color: #dc2626; }
+    
+    .stat-value { 
+      font-size: 1.75rem; 
+      font-weight: 700;
+      letter-spacing: -0.025em;
+      line-height: 1;
+    }
+    
+    .stat-label { 
+      font-size: 0.875rem; 
+      color: var(--text-secondary);
+      font-weight: 500;
+      margin-top: 0.25rem;
+    }
+
+    /* ==================== FORMS ==================== */
+    .form-group { margin-bottom: 1.25rem; }
+    
+    .form-label { 
+      display: block; 
+      font-size: 0.875rem; 
+      font-weight: 500; 
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+    
+    .form-input, .form-select, .form-textarea {
+      width: 100%;
+      padding: 0.625rem 0.875rem;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      font-family: inherit;
+      background: var(--surface);
+      color: var(--text);
+      transition: var(--transition);
+      outline: none;
+    }
+    
+    .form-input:focus, .form-select:focus, .form-textarea:focus { 
+      border-color: var(--primary); 
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+    
+    .form-input:disabled, .form-select:disabled { 
+      background: #f8fafc; 
+      color: var(--text-muted); 
+      cursor: not-allowed; 
+      opacity: 0.7;
+    }
+    
+    .form-row { 
+      display: grid; 
+      gap: 1rem; 
+      grid-template-columns: 1fr; 
+    }
+    
+    @media (min-width: 640px) { 
+      .form-row-2 { grid-template-columns: 1fr 1fr; } 
+      .form-row-3 { grid-template-columns: 1fr 1fr 1fr; } 
+    }
+
+    /* ==================== BUTTONS ==================== */
+    .btn { 
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 0.5rem;
+      padding: 0.625rem 1.25rem; 
+      border-radius: var(--radius); 
+      font-size: 0.875rem; 
+      font-weight: 500;
+      border: none; 
+      cursor: pointer; 
+      transition: var(--transition); 
+      font-family: inherit;
+      letter-spacing: 0.01em;
+      white-space: nowrap;
+    }
+    
+    .btn:active { transform: scale(0.98); }
+    
+    .btn-primary { 
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); 
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+    }
+    .btn-primary:hover { 
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      box-shadow: 0 8px 12px -2px rgba(59, 130, 246, 0.35);
+      transform: translateY(-1px);
+    }
+    
+    .btn-success { 
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(16, 185, 129, 0.3);
+    }
+    .btn-success:hover { 
+      background: linear-gradient(135deg, #059669 0%, #047857 100%);
+      transform: translateY(-1px);
+    }
+    
+    .btn-danger { 
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(239, 68, 68, 0.3);
+    }
+    .btn-danger:hover { 
+      background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+      transform: translateY(-1px);
+    }
+    
+    .btn-warning { 
+      background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
+      color: white;
+      box-shadow: 0 4px 6px -1px rgba(245, 158, 11, 0.3);
+    }
+    
+    .btn-secondary { 
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%); 
+      color: white;
+    }
+    
+    .btn-outline { 
+      background: transparent; 
+      border: 1.5px solid var(--border); 
+      color: var(--text-secondary);
+    }
+    .btn-outline:hover { 
+      background: var(--bg); 
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+    
+    .btn-sm { padding: 0.375rem 0.875rem; font-size: 0.8125rem; }
+    .btn-lg { padding: 0.875rem 2rem; font-size: 1rem; }
+    .btn-block { width: 100%; }
+    .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none !important; }
+
+    /* ==================== TABLES ==================== */
+    .table-container { 
+      overflow-x: auto;
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+    }
+    
+    .data-table { 
+      width: 100%; 
+      border-collapse: collapse; 
+      font-size: 0.875rem; 
+    }
+    
+    .data-table th { 
+      text-align: left; 
+      padding: 0.875rem 1rem; 
+      background: #f8fafc; 
+      font-weight: 600; 
+      color: var(--text-secondary); 
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      font-size: 0.8125rem;
+      text-transform: uppercase;
+      letter-spacing: 0.025em;
+    }
+    
+    .data-table td { 
+      padding: 0.875rem 1rem; 
+      border-bottom: 1px solid var(--border-light);
+      color: var(--text);
+      font-weight: 400;
+    }
+    
+    .data-table tr:hover td { background: #f8fafc; }
+    .data-table tr:last-child td { border-bottom: none; }
+    
+    .data-table .actions { display: flex; gap: 0.5rem; }
+
+    /* Mobile Card Table */
+    @media (max-width: 768px) {
+      .data-table thead { display: none; }
+      .data-table, .data-table tbody, .data-table tr, .data-table td { display: block; width: 100%; }
+      .data-table tr {
+        margin-bottom: 0.75rem;
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 0.75rem;
+        background: var(--surface);
+      }
+      .data-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid var(--border-light);
+        text-align: right;
+      }
+      .data-table td:last-child { border-bottom: none; }
+      .data-table td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--text-secondary);
+        text-align: left;
+        margin-right: 1rem;
+      }
+    }
+
+    /* ==================== USER CARDS GRID ==================== */
+    .user-card-grid { 
+      display: grid; 
+      gap: 1.25rem; 
+      grid-template-columns: repeat(1, 1fr); 
+    }
+    
+    @media (min-width: 640px) { .user-card-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (min-width: 1024px) { .user-card-grid { grid-template-columns: repeat(3, 1fr); } }
+    
+    .user-card { 
+      background: var(--surface); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius-lg); 
+      overflow: hidden; 
+      cursor: pointer; 
+      transition: var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .user-card:hover { 
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-2px);
+      border-color: #cbd5e1;
+    }
+    
+    .user-card-img { 
+      width: 100%; 
+      height: 180px; 
+      object-fit: cover; 
+      background: linear-gradient(135deg, #e2e8f0 0%, #cbd5e1 100%);
+    }
+    
+    .user-card-body { 
+      padding: 1.25rem; 
+    }
+    
+    .user-card-name { 
+      font-weight: 600; 
+      font-size: 1rem; 
+      margin-bottom: 0.25rem;
+      color: var(--text);
+    }
+    
+    .user-card-role { 
+      font-size: 0.8125rem; 
+      color: var(--text-secondary);
+      margin-bottom: 0.75rem;
+    }
+
+    /* ==================== MODALS ==================== */
+    .modal-overlay { 
+      display: none; 
+      position: fixed; 
+      inset: 0; 
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(8px);
+      z-index: 200; 
+      align-items: center; 
+      justify-content: center; 
+      padding: 1rem;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .modal-overlay.show { 
+      display: flex; 
+      opacity: 1;
+    }
+    
+    .modal { 
+      background: var(--surface); 
+      border-radius: var(--radius-xl); 
+      width: 100%; 
+      max-width: 600px; 
+      max-height: 90vh; 
+      overflow-y: auto;
+      box-shadow: var(--shadow-xl);
+      transform: scale(0.95);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      border: 1px solid var(--border);
+    }
+    
+    .modal-overlay.show .modal {
+      transform: scale(1);
+    }
+    
+    .modal-header { 
+      padding: 1.25rem 1.5rem; 
+      border-bottom: 1px solid var(--border); 
+      display: flex; 
+      justify-content: space-between; 
+      align-items: center;
+      position: sticky;
+      top: 0;
+      background: var(--surface);
+      z-index: 10;
+      border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    }
+    
+    .modal-title { 
+      font-size: 1.125rem; 
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    
+    .modal-close { 
+      background: var(--bg); 
+      border: none; 
+      font-size: 1.25rem; 
+      cursor: pointer; 
+      color: var(--text-secondary);
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius);
+      transition: var(--transition);
+    }
+    
+    .modal-close:hover { 
+      background: var(--danger-light); 
+      color: var(--danger);
+    }
+    
+    .modal-body { padding: 1.5rem; }
+    .modal-footer { 
+      padding: 1rem 1.5rem; 
+      border-top: 1px solid var(--border); 
+      display: flex; 
+      justify-content: flex-end; 
+      gap: 0.75rem;
+      position: sticky;
+      bottom: 0;
+      background: var(--surface);
+      border-radius: 0 0 var(--radius-xl) var(--radius-xl);
+    }
+    
+    .modal-lg { max-width: 900px; }
+    .modal-xl { max-width: 1100px; }
+
+    /* ==================== ALERTS / TOAST ==================== */
+    #alert-box {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      z-index: 400;
+      max-width: 420px;
+      width: calc(100% - 40px);
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      pointer-events: none;
+    }
+    
+    .alert { 
+      padding: 1rem 1.25rem; 
+      border-radius: var(--radius-lg); 
+      font-size: 0.875rem; 
+      display: flex; 
+      align-items: flex-start; 
+      gap: 0.75rem; 
+      box-shadow: var(--shadow-xl);
+      animation: slideInRight 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative; 
+      overflow: hidden;
+      pointer-events: all;
+      border: 1px solid transparent;
+    }
+    
+    .alert-success { 
+      background: #f0fdf4; 
+      color: #166534; 
+      border-color: #86efac;
+    }
+    .alert-danger { 
+      background: #fff1f2; 
+      color: #991b1b; 
+      border-color: #fca5a5;
+    }
+    .alert-warning { 
+      background: #fffbeb; 
+      color: #92400e; 
+      border-color: #fcd34d;
+    }
+    .alert-info { 
+      background: #eff6ff; 
+      color: #1e40af; 
+      border-color: #93c5fd;
+    }
+    
+    .alert-icon { 
+      font-size: 1.25rem; 
+      flex-shrink: 0; 
+      margin-top: 0.125rem;
+    }
+    
+    .alert-body { flex: 1; }
+    .alert-msg { line-height: 1.5; font-weight: 500; }
+    
+    .alert-progress { 
+      height: 3px; 
+      border-radius: 0 0 var(--radius-lg) var(--radius-lg); 
+      position: absolute; 
+      bottom: 0; 
+      left: 0; 
+      animation: alertProgress 5s linear forwards; 
+    }
+    
+    .alert-success .alert-progress { background: var(--success); }
+    .alert-danger .alert-progress { background: var(--danger); }
+    .alert-warning .alert-progress { background: var(--warning); }
+    .alert-info .alert-progress { background: var(--primary); }
+    
+    @keyframes slideInRight { 
+      from { transform: translateX(120%) scale(0.9); opacity: 0; } 
+      to { transform: translateX(0) scale(1); opacity: 1; } 
+    }
+    @keyframes alertProgress { from { width: 100%; } to { width: 0%; } }
+
+    /* ==================== LOADING ==================== */
+    .loading-overlay { 
+      display: none; 
+      position: fixed; 
+      inset: 0; 
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      z-index: 300; 
+      align-items: center; 
+      justify-content: center; 
+      flex-direction: column; 
+      gap: 1.25rem;
+    }
+    
+    .loading-overlay.show { display: flex; }
+    
+    .spinner { 
+      width: 48px; 
+      height: 48px; 
+      border: 4px solid var(--border); 
+      border-top-color: var(--primary); 
+      border-right-color: var(--primary);
+      border-radius: 50%; 
+      animation: spin 0.8s linear infinite; 
+    }
+    
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ==================== FACE/QR CAMERA ==================== */
+    .camera-container { 
+      position: relative; 
+      width: 100%; 
+      max-width: 420px; 
+      margin: 0 auto;
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      background: #000;
+    }
+    
+    .camera-container video { 
+      width: 100%; 
+      border-radius: var(--radius-lg); 
+      display: block; 
+    }
+    
+    .face-guide { 
+      position: absolute; 
+      top: 50%; 
+      left: 50%; 
+      transform: translate(-50%, -50%); 
+      width: 220px; 
+      height: 280px; 
+      border: 3px dashed rgba(255,255,255,0.8); 
+      border-radius: 50%; 
+      pointer-events: none;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
+    }
+    
+    .qr-overlay { 
+      position: absolute; 
+      top: 0; 
+      left: 0; 
+      width: 100%; 
+      height: 100%; 
+      border: 2px solid var(--primary); 
+      border-radius: var(--radius-lg);
+    }
+
+    /* ==================== SIGNATURE PAD ==================== */
+    .signature-pad-container { 
+      border: 2px dashed var(--border); 
+      border-radius: var(--radius); 
+      background: #fafafa;
+      overflow: hidden;
+    }
+    
+    .signature-pad-container canvas { 
+      width: 100%; 
+      height: 200px; 
+      display: block; 
+      cursor: crosshair;
+    }
+
+    /* ==================== ID CARD PREVIEW ==================== */
+    .id-card-preview { 
+      width: 100%; 
+      max-width: 380px;
+      aspect-ratio: 1.586;
+      background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+      border: 1px solid #e2e8f0; 
+      border-radius: var(--radius-lg); 
+      padding: 1.5rem; 
+      margin: 0 auto; 
+      position: relative; 
+      box-shadow: var(--shadow-lg);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .id-card-header { 
+      display: flex; 
+      align-items: center; 
+      gap: 1rem; 
+      margin-bottom: 1rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--primary-light);
+    }
+    
+    .id-card-photo { 
+      width: 72px; 
+      height: 72px; 
+      border-radius: 50%; 
+      object-fit: cover; 
+      background: #e2e8f0;
+      border: 3px solid white;
+      box-shadow: var(--shadow);
+    }
+    
+    .id-card-info { flex: 1; }
+    .id-card-name { 
+      font-weight: 700; 
+      font-size: 1.125rem;
+      color: var(--text);
+      margin-bottom: 0.25rem;
+    }
+    .id-card-role { 
+      font-size: 0.875rem; 
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    .id-card-qr { 
+      position: absolute; 
+      bottom: 1.25rem; 
+      right: 1.25rem; 
+    }
+    
+    .id-card-sppg { 
+      position: absolute; 
+      bottom: 1.25rem; 
+      left: 1.25rem; 
+      font-size: 0.75rem; 
+      color: var(--text-muted);
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    
+    .id-card-company {
+      margin-top: auto;
+      font-size: 0.75rem;
+      color: var(--primary);
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    /* ==================== DEVICE UI ==================== */
+    .device-ui { 
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+      min-height: 100vh; 
+      padding: 2rem; 
+      text-align: center; 
+      gap: 2rem;
+      background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    }
+    
+    .device-btn-wrap { 
+      position: relative; 
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center; 
+    }
+    
+    .device-btn-pulse { 
+      position: absolute; 
+      width: 220px; 
+      height: 220px; 
+      border-radius: 50%; 
+      background: rgba(59, 130, 246, 0.15); 
+      animation: pulseBig 2.5s ease-in-out infinite; 
+      pointer-events: none; 
+    }
+    
+    .device-btn-pulse2 { animation-delay: 0.8s; }
+    
+    @keyframes pulseBig { 
+      0%,100% { transform: scale(1); opacity: 0.5; } 
+      50% { transform: scale(1.3); opacity: 0; } 
+    }
+    
+    .device-btn-absen { 
+      position: relative; 
+      z-index: 1; 
+      width: 200px; 
+      height: 200px; 
+      border-radius: 50%; 
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); 
+      color: white; 
+      font-size: 1.25rem; 
+      font-weight: 700; 
+      border: 4px solid rgba(255,255,255,0.3); 
+      cursor: pointer; 
+      box-shadow: 0 12px 40px rgba(37,99,235,0.4); 
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      display: flex; 
+      flex-direction: column; 
+      align-items: center; 
+      justify-content: center; 
+      gap: 0.5rem;
+    }
+    
+    .device-btn-absen:hover { 
+      transform: scale(1.08); 
+      box-shadow: 0 16px 48px rgba(37,99,235,0.5);
+    }
+    
+    .device-btn-absen:active { transform: scale(0.92); }
+    
+    .device-btn-absen .btn-icon { font-size: 3rem; line-height: 1; }
+    .device-btn-absen .btn-label { 
+      font-size: 0.875rem; 
+      letter-spacing: 0.2em; 
+      text-transform: uppercase; 
+      opacity: 0.9;
+      font-weight: 600;
+    }
+    
+    .device-status { 
+      font-size: 1rem; 
+      font-weight: 500; 
+      color: var(--text-secondary); 
+      background: var(--surface); 
+      border: 1px solid var(--border); 
+      border-radius: 999px; 
+      padding: 0.625rem 1.5rem;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .device-time { 
+      font-size: 3.5rem; 
+      font-weight: 800; 
+      color: var(--text); 
+      letter-spacing: -0.03em;
+      line-height: 1;
+      font-variant-numeric: tabular-nums;
+    }
+    
+    .device-date { 
+      font-size: 1rem; 
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    /* ==================== AUTH PAGES ==================== */
+    .auth-page { 
+      min-height: 100vh; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      padding: 1rem; 
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .auth-page::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+      top: -200px;
+      right: -200px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    
+    .auth-page::after {
+      content: '';
+      position: absolute;
+      width: 400px;
+      height: 400px;
+      background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%);
+      bottom: -100px;
+      left: -100px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+    
+    .auth-card { 
+      background: var(--surface); 
+      border-radius: var(--radius-xl); 
+      padding: 2.5rem; 
+      width: 100%; 
+      max-width: 520px; 
+      box-shadow: var(--shadow-xl);
+      position: relative;
+      z-index: 1;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .auth-logo { 
+      text-align: center; 
+      margin-bottom: 2rem; 
+      font-size: 1.75rem; 
+      font-weight: 800; 
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      letter-spacing: -0.025em;
+    }
+    
+    .auth-footer { 
+      text-align: center; 
+      margin-top: 1.5rem; 
+      font-size: 0.875rem; 
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+    
+    .auth-footer a { 
+      color: var(--primary); 
+      text-decoration: none; 
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+    
+    .auth-footer a:hover { color: var(--primary-dark); text-decoration: underline; }
+
+    /* ==================== BADGES ==================== */
+    .badge { 
+      display: inline-flex; 
+      align-items: center;
+      padding: 0.375rem 0.875rem; 
+      border-radius: 9999px; 
+      font-size: 0.75rem; 
+      font-weight: 600;
+      letter-spacing: 0.01em;
+    }
+    
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-red { background: #fee2e2; color: #991b1b; }
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    .badge-gray { background: #f1f5f9; color: #475569; }
+    .badge-orange { background: #fef3c7; color: #92400e; }
+
+    /* ==================== PROGRESS BAR ==================== */
+    .progress-bar { 
+      height: 8px; 
+      background: var(--border); 
+      border-radius: 4px; 
+      overflow: hidden; 
+      margin-bottom: 1.25rem; 
+    }
+    
+    .progress-bar-fill { 
+      height: 100%; 
+      background: linear-gradient(90deg, #3b82f6, #2563eb); 
+      transition: width 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      border-radius: 4px;
+    }
+
+    /* ==================== CHECKBOX / RADIO ==================== */
+    .checkbox-row { 
+      display: flex; 
+      align-items: center; 
+      gap: 0.625rem; 
+      margin-bottom: 0.625rem;
+      cursor: pointer;
+      font-size: 0.875rem;
+      color: var(--text);
+      font-weight: 500;
+    }
+    
+    .checkbox-row input { 
+      width: 20px; 
+      height: 20px; 
+      accent-color: var(--primary);
+      cursor: pointer;
+    }
+
+    /* ==================== RESPONSIVE SIDEBAR ==================== */
+    @media (min-width: 1024px) {
+      #app-layout { flex-direction: row; align-items: flex-start; }
+
+      #sidebar {
+        position: sticky !important;
+        top: 0 !important;
+        left: auto !important;
+        transform: none !important;
+        height: 100vh;
+        flex-shrink: 0;
+        width: var(--sidebar-width);
+        transition: width 0.3s ease;
+        overflow-x: hidden;
+        overflow-y: auto;
+        z-index: 10;
+      }
+      
+      #sidebar.collapsed { width: var(--sidebar-collapsed); }
+      
+      #sidebar.collapsed .sidebar-brand-text,
+      #sidebar.collapsed .sidebar-user .name,
+      #sidebar.collapsed .sidebar-user .role,
+      #sidebar.collapsed .nav-item-text { display: none; }
+      
+      #sidebar.collapsed .nav-item { 
+        justify-content: center; 
+        padding: 0.875rem; 
+        gap: 0; 
+      }
+      
+      #sidebar.collapsed .sidebar-brand { 
+        text-align: center; 
+        padding: 0 0.5rem 1.5rem; 
+      }
+      
+      #sidebar.collapsed .sidebar-user { 
+        text-align: center; 
+        padding: 0 0.5rem 1rem; 
+        justify-content: center;
+      }
+      
+      #sidebar.collapsed .sidebar-user img { 
+        margin: 0; 
+        width: 40px; 
+        height: 40px; 
+      }
+
+      #main-content { 
+        flex: 1; 
+        min-width: 0; 
+        margin-left: 0; 
+      }
+      
+      #header .menu-btn { display: flex !important; }
+      #sidebar-overlay { display: none !important; }
+    }
+
+    /* ==================== UTILITIES ==================== */
+    .hidden { display: none !important; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .text-muted { color: var(--text-muted); }
+    .text-success { color: var(--success); }
+    .text-danger { color: var(--danger); }
+    .text-warning { color: var(--warning); }
+    .text-primary { color: var(--primary); }
+    .mb-1 { margin-bottom: 0.5rem; }
+    .mb-2 { margin-bottom: 1rem; }
+    .mt-2 { margin-top: 1rem; }
+    .flex { display: flex; }
+    .flex-between { justify-content: space-between; }
+    .items-center { align-items: center; }
+    .gap-1 { gap: 0.5rem; }
+    .gap-2 { gap: 1rem; }
+    .w-full { width: 100%; }
+    .flex-wrap { flex-wrap: wrap; }
+    
+    .section-title {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 1.25rem;
+      color: var(--text);
+      letter-spacing: -0.025em;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-muted);
+    }
+    
+    .empty-state-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    /* Mobile Bottom Safe Area */
+    @supports (padding-bottom: env(safe-area-inset-bottom)) {
+      .device-ui { padding-bottom: max(2rem, env(safe-area-inset-bottom)); }
+      #content-area { padding-bottom: max(1.25rem, env(safe-area-inset-bottom)); }
+    }
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <base target="_blank">
 </head>
 <body>
 
 <!-- Loading Overlay -->
 <div id="loading-overlay" class="loading-overlay">
   <div class="spinner"></div>
-  <div>Memuat...</div>
+  <div style="font-weight:600; color:var(--text-secondary); font-size:0.9375rem;">Memuat...</div>
 </div>
 
 <!-- Alert Box -->
-<div id="alert-box" style="position:fixed; top:70px; right:20px; z-index:400; max-width:400px;"></div>
+<div id="alert-box"></div>
 
 <!-- ==================== AUTH LAYOUT ==================== -->
 <div id="auth-layout">
@@ -318,7 +1324,7 @@
 
       <!-- Forgot Password -->
       <div id="forgot-password-section" class="hidden">
-        <h3 style="margin-bottom:1rem;">Lupa Password</h3>
+        <h3 style="margin-bottom:1.25rem; font-size:1.25rem; font-weight:700;">Lupa Password</h3>
         <div class="form-group"><label class="form-label">Username</label><input type="text" id="fp-username" class="form-input"></div>
         <div class="form-group"><label class="form-label">Email</label><input type="email" id="fp-email" class="form-input"></div>
         <div class="form-group"><label class="form-label">ID Card Unik</label><input type="text" id="fp-idcard" class="form-input" placeholder="8 karakter"></div>
@@ -328,7 +1334,7 @@
 
       <!-- Reset Password -->
       <div id="reset-password-section" class="hidden">
-        <h3 style="margin-bottom:1rem;">Reset Password</h3>
+        <h3 style="margin-bottom:1.25rem; font-size:1.25rem; font-weight:700;">Reset Password</h3>
         <input type="hidden" id="reset-token">
         <div class="form-group"><label class="form-label">Password Baru</label><input type="password" id="fp-new-password" class="form-input"></div>
         <div class="form-group"><label class="form-label">Konfirmasi Password Baru</label><input type="password" id="fp-confirm-password" class="form-input"></div>
@@ -339,7 +1345,7 @@
 
   <!-- PAGE: REGISTER -->
   <div id="page-register" class="page auth-page hidden">
-    <div class="auth-card" style="max-width:600px; max-height:90vh; overflow-y:auto;">
+    <div class="auth-card" style="max-width:640px; max-height:92vh; overflow-y:auto;">
       <div class="auth-logo">📝 Registrasi Karyawan</div>
       <div class="form-row form-row-2">
         <div class="form-group"><label class="form-label">Nama Lengkap *</label><input type="text" id="reg-nama" class="form-input"></div>
@@ -369,14 +1375,14 @@
       </div>
 
       <!-- Foto Profil -->
-      <div class="card" style="margin:1rem 0; padding:1rem;">
-        <div class="card-title mb-1">📷 Foto Profil</div>
+      <div class="card" style="margin:1.25rem 0; padding:1.25rem;">
+        <div class="card-title mb-2">📷 Foto Profil</div>
         <div id="reg-photo-step">
-          <video id="reg-video-photo" style="width:100%; border-radius:8px;" autoplay playsinline muted></video>
+          <video id="reg-video-photo" style="width:100%; border-radius:var(--radius-lg);" autoplay playsinline muted></video>
           <canvas id="reg-canvas-photo" style="display:none;"></canvas>
-          <img id="reg-photo-preview" class="hidden" style="width:100%; border-radius:8px; margin-top:0.5rem;">
+          <img id="reg-photo-preview" class="hidden" style="width:100%; border-radius:var(--radius-lg); margin-top:0.75rem;">
         </div>
-        <div class="flex gap-1 mt-2">
+        <div class="flex gap-2 mt-3">
           <button id="btn-capture-photo" class="btn btn-secondary btn-sm">📷 Ambil dari Kamera</button>
           <button id="btn-pick-photo" class="btn btn-outline btn-sm">🖼️ Pilih dari Galeri</button>
         </div>
@@ -384,20 +1390,20 @@
       </div>
 
       <!-- Face Capture -->
-      <div class="card" style="margin:1rem 0; padding:1rem;">
-        <div class="card-title mb-1">🧑 Pendaftaran Wajah *</div>
+      <div class="card" style="margin:1.25rem 0; padding:1.25rem;">
+        <div class="card-title mb-2">🧑 Pendaftaran Wajah *</div>
         <div id="reg-face-step">
           <div class="camera-container">
-            <video id="reg-video" style="width:100%; border-radius:8px;" autoplay playsinline muted></video>
+            <video id="reg-video" style="width:100%; border-radius:var(--radius-lg);" autoplay playsinline muted></video>
             <div class="face-guide"></div>
             <canvas id="reg-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%;"></canvas>
           </div>
         </div>
         <div id="reg-face-status" class="text-muted mt-2">Klik tombol di bawah untuk memulai pendaftaran wajah</div>
-        <button id="btn-capture-face" class="btn btn-secondary btn-sm mt-2">🎥 Mulai Pendaftaran Wajah</button>
+        <button id="btn-capture-face" class="btn btn-secondary btn-sm mt-3">🎥 Mulai Pendaftaran Wajah</button>
       </div>
 
-      <div class="checkbox-row mb-2">
+      <div class="checkbox-row mb-3">
         <input type="checkbox" id="reg-setuju">
         <label for="reg-setuju">Saya menyetujui kebijakan penggunaan data pribadi</label>
       </div>
@@ -411,13 +1417,18 @@
 <!-- ==================== APP LAYOUT ==================== -->
 <div id="app-layout" class="hidden">
   <div id="sidebar">
-    <div class="sidebar-brand">📋 <span class="sidebar-brand-text">Sistem Absensi</span></div>
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">📋</div>
+      <span class="sidebar-brand-text">Sistem Absensi</span>
+    </div>
     <div class="sidebar-user">
       <img id="sidebar-foto" src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7" alt="Foto">
-      <div class="name" id="sidebar-nama">User</div>
-      <div class="role" id="sidebar-role">Role</div>
+      <div>
+        <div class="name" id="sidebar-nama">User</div>
+        <div class="role" id="sidebar-role">Role</div>
+      </div>
     </div>
-    <nav>
+    <nav class="nav-section">
       <div class="nav-item" data-page="dashboard">📊 <span class="nav-item-text">Dashboard</span></div>
       <div class="nav-item" data-page="profil">👤 <span class="nav-item-text">Profil</span></div>
       <div class="nav-item admin-only" data-page="manajemen-user">⚙️ <span class="nav-item-text">Manajemen User</span></div>
@@ -427,7 +1438,7 @@
       <div class="nav-item admin-only akuntan-only" data-page="absensi">📋 <span class="nav-item-text">Data Absensi</span></div>
       <div class="nav-item admin-only" data-page="audit-log">📜 <span class="nav-item-text">Catatan Aktivitas</span></div>
       <div class="nav-item" data-page="absen-manual">📷 <span class="nav-item-text">Absen</span></div>
-      <div class="nav-item" id="btn-logout-sidebar" style="color:#ef4444;">🚪 <span class="nav-item-text">Logout</span></div>
+      <div class="nav-item logout" id="btn-logout-sidebar">🚪 <span class="nav-item-text">Logout</span></div>
     </nav>
   </div>
 
@@ -438,7 +1449,7 @@
       <button id="menu-btn" class="menu-btn">☰</button>
       <div class="page-title" id="page-title">Dashboard</div>
       <div style="display:flex; align-items:center; gap:0.75rem;">
-        <span id="header-nama" style="font-size:0.875rem; color:var(--text-muted);"></span>
+        <span id="header-nama" style="font-size:0.875rem; color:var(--text-secondary); font-weight:500;"></span>
         <button id="btn-logout" class="btn btn-sm btn-outline">🚪 Logout</button>
       </div>
     </div>
@@ -454,7 +1465,7 @@
       <!-- PAGE: PROFIL -->
       <div id="page-profil" class="page hidden">
         <div id="profil-readonly"></div>
-        <div id="profil-edit-form" class="hidden card" style="margin-top:1rem;">
+        <div id="profil-edit-form" class="hidden card" style="margin-top:1.25rem;">
           <div class="card-header"><div class="card-title">✏️ Edit Profil</div></div>
           <div class="form-row form-row-2">
             <div class="form-group"><label class="form-label">Nama Lengkap</label><input type="text" id="edit-nama" class="form-input"></div>
@@ -465,12 +1476,12 @@
             <div class="form-group"><label class="form-label">Nama Bank</label><input type="text" id="edit-bank" class="form-input"></div>
             <div class="form-group"><label class="form-label">Atas Nama Rekening</label><input type="text" id="edit-rekening" class="form-input"></div>
           </div>
-          <div class="flex gap-1 mt-2">
+          <div class="flex gap-2 mt-3">
             <button id="btn-save-profil" class="btn btn-primary">💾 Simpan</button>
             <button id="btn-cancel-profil" class="btn btn-outline">Batal</button>
           </div>
         </div>
-        <div class="flex gap-1 mt-2">
+        <div class="flex gap-2 mt-3 flex-wrap">
           <button id="btn-edit-profil" class="btn btn-outline">✏️ Edit Profil</button>
           <button id="btn-update-wajah" class="btn btn-outline">🧑 Update Data Wajah</button>
           <button id="btn-update-foto-profil" class="btn btn-outline">📷 Update Foto Profil</button>
@@ -482,9 +1493,9 @@
         <div class="modal">
           <div class="modal-header"><div class="modal-title">📷 Update Foto Profil</div><button class="modal-close modal-cancel">&times;</button></div>
           <div class="modal-body">
-            <img id="update-foto-preview" class="hidden" style="width:100%; border-radius:8px; margin-bottom:0.75rem;">
-            <video id="update-foto-video" style="width:100%; border-radius:8px;" autoplay playsinline muted></video>
-            <div class="flex gap-1 mt-2">
+            <img id="update-foto-preview" class="hidden" style="width:100%; border-radius:var(--radius-lg); margin-bottom:0.75rem;">
+            <video id="update-foto-video" style="width:100%; border-radius:var(--radius-lg);" autoplay playsinline muted></video>
+            <div class="flex gap-2 mt-3">
               <button id="btn-update-foto-kamera" class="btn btn-secondary btn-sm">📷 Ambil dari Kamera</button>
               <button id="btn-update-foto-galeri" class="btn btn-outline btn-sm">🖼️ Pilih dari Galeri</button>
             </div>
@@ -503,7 +1514,7 @@
           <div class="modal-header"><div class="modal-title">🧑 Update Data Wajah</div><button class="modal-close modal-cancel">&times;</button></div>
           <div class="modal-body">
             <div class="camera-container">
-              <video id="update-wajah-video" style="width:100%; border-radius:8px;" autoplay playsinline muted></video>
+              <video id="update-wajah-video" style="width:100%; border-radius:var(--radius-lg);" autoplay playsinline muted></video>
               <div class="face-guide"></div>
               <canvas id="update-wajah-canvas" style="position:absolute; top:0; left:0; width:100%; height:100%;"></canvas>
             </div>
@@ -519,7 +1530,7 @@
       <!-- PAGE: MANAJEMEN USER -->
       <div id="page-manajemen-user" class="page hidden">
         <div class="card">
-          <div class="card-header flex flex-between items-center">
+          <div class="card-header flex flex-between items-center flex-wrap">
             <div class="card-title">👥 Manajemen User</div>
             <button id="btn-register-device" class="btn btn-primary btn-sm">➕ Daftarkan Perangkat Absensi</button>
           </div>
@@ -574,7 +1585,7 @@
       <!-- PAGE: PAYROLL -->
       <div id="page-payroll" class="page hidden">
         <div class="card">
-          <div class="card-header flex flex-between items-center">
+          <div class="card-header flex flex-between items-center flex-wrap">
             <div class="card-title">💵 Proses Payroll</div>
             <button id="btn-proses-payroll" class="btn btn-primary btn-sm">▶️ Proses Payroll</button>
           </div>
@@ -599,8 +1610,8 @@
               <div class="form-group"><label class="form-label">Periode Akhir</label><input type="date" id="payroll-akhir" class="form-input"></div>
             </div>
             <div id="payroll-karyawan-inputs"></div>
-            <div class="card" style="margin-top:1rem;">
-              <div class="card-title mb-1">✍️ Tanda Tangan Digital</div>
+            <div class="card" style="margin-top:1.25rem;">
+              <div class="card-title mb-2">✍️ Tanda Tangan Digital</div>
               <div class="signature-pad-container">
                 <canvas id="signature-pad"></canvas>
               </div>
@@ -632,9 +1643,9 @@
       <!-- PAGE: ABSENSI -->
       <div id="page-absensi" class="page hidden">
         <div class="card">
-          <div class="card-header flex flex-between items-center" style="flex-wrap:wrap; gap:0.5rem;">
+          <div class="card-header flex flex-between items-center flex-wrap" style="gap:0.75rem;">
             <div class="card-title">📋 Data Absensi</div>
-            <div class="flex gap-1" style="flex-wrap:wrap;">
+            <div class="flex gap-2 flex-wrap" style="flex-wrap:wrap;">
               <input type="date" id="filter-abs-tanggal" class="form-input" style="width:auto;">
               <input type="text" id="filter-abs-sppg" class="form-input" placeholder="SPPG" style="width:120px;">
               <input type="text" id="filter-abs-jabatan" class="form-input" placeholder="Jabatan" style="width:120px;">
@@ -672,32 +1683,32 @@
 
           <!-- Step QR -->
           <div id="device-step-qr" class="hidden">
-            <div class="card-title mb-2" style="font-size:1.5rem;">📷 Scan QR Code ID Card</div>
-            <div class="form-group" id="qr-camera-select-group" style="max-width:400px; margin:0 auto 1rem;">
+            <div class="card-title mb-3" style="font-size:1.75rem; font-weight:700;">📷 Scan QR Code ID Card</div>
+            <div class="form-group" id="qr-camera-select-group" style="max-width:420px; margin:0 auto 1.25rem;">
               <label class="form-label">Pilih Kamera</label>
               <select id="qr-camera-select" class="form-select"></select>
             </div>
             <div class="camera-container">
-              <div id="device-qr-video" style="width:100%; max-width:400px;"></div>
+              <div id="device-qr-video" style="width:100%; max-width:420px;"></div>
             </div>
-            <div class="device-status">Arahkan QR Code ke kamera</div>
+            <div class="device-status mt-3">Arahkan QR Code ke kamera</div>
           </div>
 
           <!-- Step Face -->
           <div id="device-step-face" class="hidden">
-            <div class="card-title mb-2" style="font-size:1.5rem;">🧑 Scan Wajah</div>
+            <div class="card-title mb-3" style="font-size:1.75rem; font-weight:700;">🧑 Scan Wajah</div>
             <div class="camera-container">
-              <video id="device-face-video" style="width:100%; border-radius:12px;" autoplay playsinline muted></video>
+              <video id="device-face-video" style="width:100%; border-radius:var(--radius-lg);" autoplay playsinline muted></video>
               <div class="face-guide"></div>
             </div>
-            <div id="device-face-status" class="device-status">Posisikan wajah di dalam oval...</div>
+            <div id="device-face-status" class="device-status mt-3">Posisikan wajah di dalam oval...</div>
           </div>
 
           <!-- Step Result -->
           <div id="device-step-result" class="hidden">
-            <div id="device-result-icon" style="font-size:4rem; margin-bottom:1rem;"></div>
-            <div id="device-result-text" style="font-size:1.25rem; font-weight:600;"></div>
-            <button id="btn-device-done" class="btn btn-primary btn-lg mt-2">OK</button>
+            <div id="device-result-icon" style="font-size:5rem; margin-bottom:1.25rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));"></div>
+            <div id="device-result-text" style="font-size:1.5rem; font-weight:700;"></div>
+            <button id="btn-device-done" class="btn btn-primary btn-lg mt-3" style="min-width:160px;">OK</button>
           </div>
         </div>
       </div>
@@ -718,29 +1729,29 @@
             </div>
             <div class="device-status">Tekan tombol untuk memulai absensi</div>
           </div>
-          <div id="absen-step-qr" class="hidden" style="width:100%; max-width:500px; text-align:center;">
-            <div class="card-title mb-2" style="font-size:1.25rem;">📷 Scan QR Code ID Card</div>
-            <div class="form-group hidden" id="absen-qr-cam-group" style="margin-bottom:1rem;">
+          <div id="absen-step-qr" class="hidden" style="width:100%; max-width:520px; text-align:center;">
+            <div class="card-title mb-3" style="font-size:1.5rem; font-weight:700;">📷 Scan QR Code ID Card</div>
+            <div class="form-group hidden" id="absen-qr-cam-group" style="margin-bottom:1.25rem;">
               <label class="form-label">Pilih Kamera</label>
               <select id="absen-qr-cam-select" class="form-select"></select>
             </div>
-            <div id="absen-qr-video" style="width:100%;"></div>
-            <div class="device-status mt-2">Arahkan QR Code ke kamera</div>
-            <button id="btn-absen-qr-cancel" class="btn btn-outline mt-2">✖ Batal</button>
+            <div id="absen-qr-video" style="width:100%; border-radius:var(--radius-lg); overflow:hidden;"></div>
+            <div class="device-status mt-3">Arahkan QR Code ke kamera</div>
+            <button id="btn-absen-qr-cancel" class="btn btn-outline mt-3">✖ Batal</button>
           </div>
-          <div id="absen-step-face" class="hidden" style="width:100%; max-width:400px; text-align:center;">
-            <div class="card-title mb-2" style="font-size:1.25rem;">🧑 Scan Wajah</div>
+          <div id="absen-step-face" class="hidden" style="width:100%; max-width:420px; text-align:center;">
+            <div class="card-title mb-3" style="font-size:1.5rem; font-weight:700;">🧑 Scan Wajah</div>
             <div class="camera-container">
-              <video id="absen-face-video" style="width:100%; border-radius:12px;" autoplay playsinline muted></video>
+              <video id="absen-face-video" style="width:100%; border-radius:var(--radius-lg);" autoplay playsinline muted></video>
               <div class="face-guide"></div>
             </div>
-            <div id="absen-face-status" class="device-status mt-2">Posisikan wajah di dalam oval...</div>
-            <button id="btn-absen-face-cancel" class="btn btn-outline mt-2">✖ Batal</button>
+            <div id="absen-face-status" class="device-status mt-3">Posisikan wajah di dalam oval...</div>
+            <button id="btn-absen-face-cancel" class="btn btn-outline mt-3">✖ Batal</button>
           </div>
           <div id="absen-step-result" class="hidden" style="text-align:center;">
-            <div id="absen-result-icon" style="font-size:4rem; margin-bottom:1rem;"></div>
-            <div id="absen-result-text" style="font-size:1.25rem; font-weight:600;"></div>
-            <button id="btn-absen-result-ok" class="btn btn-primary btn-lg mt-2">OK</button>
+            <div id="absen-result-icon" style="font-size:5rem; margin-bottom:1.25rem; filter: drop-shadow(0 4px 6px rgba(0,0,0,0.1));"></div>
+            <div id="absen-result-text" style="font-size:1.5rem; font-weight:700;"></div>
+            <button id="btn-absen-result-ok" class="btn btn-primary btn-lg mt-3" style="min-width:160px;">OK</button>
           </div>
         </div>
       </div>
@@ -748,9 +1759,9 @@
       <!-- PAGE: AUDIT LOG -->
       <div id="page-audit-log" class="page hidden">
         <div class="card">
-          <div class="card-header flex flex-between items-center" style="flex-wrap:wrap; gap:0.5rem;">
+          <div class="card-header flex flex-between items-center flex-wrap" style="gap:0.75rem;">
             <div class="card-title">📜 Catatan Aktivitas</div>
-            <div class="flex gap-1" style="flex-wrap:wrap;">
+            <div class="flex gap-2 flex-wrap">
               <input type="text" id="filter-audit-jenis" class="form-input" placeholder="Jenis Aktivitas" style="width:150px;">
               <input type="date" id="filter-audit-tanggal" class="form-input" style="width:auto;">
               <input type="text" id="filter-audit-pelaku" class="form-input" placeholder="ID Pelaku" style="width:120px;">
@@ -812,9 +1823,7 @@ const AppState = {
   tempIdUser: null,
 };
 
-// ==================== API WRAPPER (FETCH KE APPS SCRIPT WEB APP) ====================
-// GANTI URL DI BAWAH DENGAN URL WEB APP HASIL DEPLOY APPS SCRIPT ANDA
-// Contoh: 'https://script.google.com/macros/s/XXXXXXXXXXXXXXXXXXXXXXXX/exec'
+// ==================== API WRAPPER ====================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzfO2rTkTf3futdb9GFgFWuCHz-TDFdpPLC1XoEl0DawjaZ_Hb_E9ZJ4dfIoBkv4yEA/exec';
 
 function apiCall(funcName, data) {
@@ -822,8 +1831,6 @@ function apiCall(funcName, data) {
     showLoading(true);
     fetch(SCRIPT_URL, {
       method: 'POST',
-      // PENTING: gunakan text/plain agar browser TIDAK mengirim preflight OPTIONS
-      // (Apps Script Web App tidak menangani OPTIONS, jadi harus dihindari)
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify({ function: funcName, data: data })
     })
@@ -865,7 +1872,6 @@ async function doLogin() {
       startSessionCheck();
       applyUserUI();
       if(res.user.role === 'DEVICE ABSEN') {
-        // seharusnya tidak terjadi karena device login ke sheet terpisah
         navigateTo('device-absen');
       } else {
         navigateTo('dashboard');
@@ -941,23 +1947,14 @@ const Routes = {
 function navigateTo(page) {
   const route = Routes[page];
   if(!route) return;
-
-  // Auth check
   if(route.auth && !AppState.token) { page = 'login'; }
   if(route.auth && AppState.user && route.roles && !route.roles.includes(AppState.user.role)) { page = 'dashboard'; }
   if(route.type === 'device' && !AppState.device) { page = 'login'; }
   if(page !== 'device-absen' && AppState.device) { page = 'device-absen'; }
-
   AppState.currentPage = page;
-
-  // Hide all pages
   $$('.page').forEach(p => p.classList.add('hidden'));
-
-  // Show target page
   const target = document.getElementById(Routes[page].el);
   if(target) target.classList.remove('hidden');
-
-  // Update UI
   if(page === 'login' || page === 'register') {
     $('#app-layout').classList.add('hidden');
     $('#auth-layout').classList.remove('hidden');
@@ -965,13 +1962,9 @@ function navigateTo(page) {
     $('#auth-layout').classList.add('hidden');
     $('#app-layout').classList.remove('hidden');
   }
-
-  // Update sidebar active
   $$('.nav-item').forEach(n => n.classList.remove('active'));
   const navItem = $(`.nav-item[data-page="${page}"]`);
   if(navItem) navItem.classList.add('active');
-
-  // Update page title
   const titles = {
     'login': 'Login', 'register': 'Register', 'dashboard': 'Dashboard',
     'profil': 'Profil', 'manajemen-user': 'Manajemen User', 'data-karyawan': 'Data Karyawan',
@@ -979,12 +1972,8 @@ function navigateTo(page) {
     'device-absen': 'Absensi', 'audit-log': 'Catatan Aktivitas', 'absen-manual': 'Absen'
   };
   $('#page-title').textContent = titles[page] || '';
-
-  // Close sidebar on mobile
   $('#sidebar').classList.remove('open');
   $('#sidebar-overlay').classList.remove('show');
-
-  // Page-specific init
   if(page === 'dashboard') initDashboard();
   if(page === 'profil') initProfil();
   if(page === 'manajemen-user') initManajemenUser();
@@ -1000,7 +1989,6 @@ function navigateTo(page) {
 
 // ==================== INIT APP ====================
 document.addEventListener('DOMContentLoaded', () => {
-  // Check existing session
   if(AppState.token) {
     apiCall('checkSession', { token: AppState.token }).then(res => {
       if(res.session.type === 'device') {
@@ -1020,7 +2008,6 @@ document.addEventListener('DOMContentLoaded', () => {
     navigateTo('login');
   }
 
-  // Sidebar toggle — mobile: open/close overlay; desktop: collapse/expand
   $('#menu-btn').addEventListener('click', () => {
     const isDesktop = window.innerWidth >= 1024;
     if(isDesktop) {
@@ -1033,19 +2020,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Pastikan sidebar mobile selalu tertutup saat pertama kali render,
-  // supaya tidak menumpuk dengan konten di lebar layar yang ambigu
   if(window.innerWidth < 1024) {
     $('#sidebar').classList.remove('open');
     $('#sidebar-overlay').classList.remove('show');
   }
 
-  // Restore collapse state on load
   if(window.innerWidth >= 1024 && localStorage.getItem('sidebar_collapsed') === '1') {
     $('#sidebar').classList.add('collapsed');
   }
 
-  // Saat resize dari mobile ke desktop, pastikan sidebar tampil kembali
   window.addEventListener('resize', () => {
     if(window.innerWidth >= 1024) {
       $('#sidebar').classList.remove('open');
@@ -1055,12 +2038,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   });
+  
   $('#sidebar-overlay').addEventListener('click', () => {
     $('#sidebar').classList.remove('open');
     $('#sidebar-overlay').classList.remove('show');
   });
 
-  // Nav items
   $$('.nav-item').forEach(item => {
     item.addEventListener('click', () => {
       const page = item.dataset.page;
@@ -1068,49 +2051,31 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Login form
   $('#btn-login').addEventListener('click', doLogin);
   $('#login-password').addEventListener('keypress', e => { if(e.key==='Enter') doLogin(); });
-
-  // Register form
   $('#btn-register').addEventListener('click', doRegister);
   $('#btn-to-register').addEventListener('click', () => navigateTo('register'));
   $('#btn-to-login').addEventListener('click', () => navigateTo('login'));
-
-  // Lupa password
   $('#btn-forgot').addEventListener('click', showForgotPassword);
   $('#btn-reset-password').addEventListener('click', doResetPassword);
   $('#btn-request-reset').addEventListener('click', doRequestReset);
-
-  // Logout
   $('#btn-logout').addEventListener('click', doLogout);
   $('#btn-logout-sidebar').addEventListener('click', doLogout);
-
-  // Profil
   $('#btn-edit-profil').addEventListener('click', () => toggleProfilEdit(true));
   $('#btn-cancel-profil').addEventListener('click', () => toggleProfilEdit(false));
   $('#btn-save-profil').addEventListener('click', saveProfil);
   $('#btn-update-wajah').addEventListener('click', showUpdateWajahModal);
   $('#btn-save-wajah').addEventListener('click', saveUpdateWajah);
-
-  // Manajemen User
   $('#btn-register-device').addEventListener('click', showRegisterDeviceModal);
   $('#btn-save-device').addEventListener('click', saveRegisterDevice);
   $('#btn-cancel-device').addEventListener('click', () => $('#modal-register-device').classList.remove('show'));
-
-  // Payroll
   $('#btn-proses-payroll').addEventListener('click', showPayrollModal);
   $('#btn-cancel-payroll').addEventListener('click', () => $('#modal-payroll').classList.remove('show'));
   $('#btn-accept-payroll').addEventListener('click', acceptPayroll);
   $('#btn-clear-signature').addEventListener('click', () => { if(AppState.signaturePad) AppState.signaturePad.clear(); });
-
-  // Device Absen
   $('#btn-device-absen').addEventListener('click', startDeviceFlow);
-  // #btn-device-retry dihapus: elemen ini tidak ada di HTML dan menyebabkan
-  // error yang memutus semua event listener setelahnya
   $('#btn-device-done').addEventListener('click', resetDeviceFlow);
 
-  // Close modals
   $$('.modal-close, .modal-cancel').forEach(btn => {
     btn.addEventListener('click', () => {
       btn.closest('.modal-overlay').classList.remove('show');
@@ -1118,33 +2083,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Register: SPPG lainnya toggle
   $('#reg-sppg').addEventListener('change', e => {
     $('#reg-sppg-lainnya-group').classList.toggle('hidden', e.target.value !== 'LAINNYA');
   });
 
-  // Register: Jabatan lainnya toggle
   $('#reg-jabatan').addEventListener('change', e => {
     $('#reg-jabatan-lainnya-group').classList.toggle('hidden', e.target.value !== 'LAINNYA');
   });
 
-  // Register: pilih foto dari galeri
   $('#btn-pick-photo').addEventListener('click', () => $('#reg-photo-file').click());
   $('#reg-photo-file').addEventListener('change', handleRegPhotoFile);
-
-  // Profil: update foto profil
   $('#btn-update-foto-profil').addEventListener('click', showUpdateFotoModal);
   $('#btn-update-foto-kamera').addEventListener('click', captureUpdateFotoKamera);
   $('#btn-update-foto-galeri').addEventListener('click', () => $('#update-foto-file').click());
   $('#update-foto-file').addEventListener('change', handleUpdateFotoFile);
   $('#btn-save-foto-profil').addEventListener('click', saveUpdateFotoProfil);
-
-  // Register: face capture
   $('#btn-capture-face').addEventListener('click', captureFace);
   $('#btn-capture-photo').addEventListener('click', capturePhoto);
-
-  // Load face-api models on first register page visit
-  // (lazy loaded in initRegister)
 });
 
 // ==================== REGISTER ====================
@@ -1153,7 +2108,6 @@ let regPhotoBase64 = null;
 let regFacePhotoBase64 = null;
 
 async function initRegister() {
-  // Load master data
   try {
     const masters = await apiCall('getMasterData', {});
     const sppgSel = $('#reg-sppg');
@@ -1164,8 +2118,6 @@ async function initRegister() {
     console.error(e);
     showAlert('Gagal memuat data SPPG/Jabatan: ' + e + '. Coba refresh halaman.', 'warning');
   }
-
-  // Load face-api models
   await loadFaceApiModels();
 }
 
@@ -1187,15 +2139,12 @@ async function captureFace() {
   if(!AppState.modelsLoaded) await loadFaceApiModels();
   const video = $('#reg-video');
   const canvas = $('#reg-canvas');
-
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
     AppState.videoStream = stream;
     video.srcObject = stream;
     video.play();
     $('#reg-face-step').classList.remove('hidden');
-
-    // Auto capture after 3 seconds when face detected
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
@@ -1203,21 +2152,16 @@ async function captureFace() {
       if(detections) {
         clearInterval(interval);
         regFaceDescriptor = Array.from(detections.descriptor);
-
-        // Draw on canvas
         const dims = faceapi.matchDimensions(canvas, { width: video.videoWidth, height: video.videoHeight });
         faceapi.draw.drawDetections(canvas, faceapi.resizeResults(detections, dims));
-
-        // Capture photo too
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
         regFacePhotoBase64 = canvas.toDataURL('image/png');
-
         stopVideo();
         $('#reg-face-status').textContent = 'Wajah berhasil dideteksi dan dicatat.';
         $('#reg-face-status').className = 'text-success';
       }
-      if(attempts > 30) { // ~15 seconds
+      if(attempts > 30) {
         clearInterval(interval);
         stopVideo();
         $('#reg-face-status').textContent = 'Gagal mendeteksi wajah. Coba lagi.';
@@ -1238,7 +2182,6 @@ async function capturePhoto() {
     video.srcObject = stream;
     video.play();
     $('#reg-photo-step').classList.remove('hidden');
-
     setTimeout(() => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
@@ -1261,8 +2204,6 @@ function stopVideo() {
   }
 }
 
-// Resize + compress gambar dari file galeri sebelum dijadikan base64,
-// supaya ukuran upload tidak terlalu besar
 function fileToResizedBase64(file, maxSize = 800) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1291,7 +2232,6 @@ function fileToResizedBase64(file, maxSize = 800) {
   });
 }
 
-// ----- Register: pilih foto profil dari galeri -----
 async function handleRegPhotoFile(e) {
   const file = e.target.files[0];
   if(!file) return;
@@ -1304,7 +2244,6 @@ async function handleRegPhotoFile(e) {
   }
 }
 
-// ----- Profil: modal update foto profil -----
 let updateFotoBase64 = null;
 
 function showUpdateFotoModal() {
@@ -1358,7 +2297,6 @@ async function saveUpdateFotoProfil() {
     showAlert('Foto profil berhasil diperbarui', 'success');
     $('#modal-update-foto').classList.remove('show');
     stopVideo();
-    // Refresh foto di sidebar & header
     if(res.url && AppState.user) {
       AppState.user.fotoProfil = res.url;
       localStorage.setItem('absensi_user', JSON.stringify(AppState.user));
@@ -1392,12 +2330,10 @@ async function doRegister() {
     fotoProfilBase64: regPhotoBase64,
     fotoWajahBase64: regFacePhotoBase64
   };
-
   if(!data.username || !data.password || !data.namaLengkap) { showAlert('Username, Password, dan Nama Lengkap wajib diisi'); return; }
   if(data.password !== data.confirmPassword) { showAlert('Password dan konfirmasi tidak cocok'); return; }
   if(!data.setujuKebijakan) { showAlert('Anda harus menyetujui kebijakan data'); return; }
   if(!data.faceDescriptor) { showAlert('Pendaftaran wajah wajib dilakukan'); return; }
-
   try {
     const res = await apiCall('registerUser', data);
     showAlert('Registrasi berhasil! ID Card: ' + res.idCardUnik + '. Silakan login.', 'success');
@@ -1457,7 +2393,6 @@ function renderDashboardAdmin(data) {
   const container = $('#dashboard-admin');
   container.classList.remove('hidden');
   $('#dashboard-user').classList.add('hidden');
-
   container.innerHTML = `
     <div class="grid grid-4 mb-2">
       <div class="card stat-card">
@@ -1524,7 +2459,6 @@ function renderDashboardUser(data) {
   const container = $('#dashboard-user');
   container.classList.remove('hidden');
   $('#dashboard-admin').classList.add('hidden');
-
   container.innerHTML = `
     <div class="grid grid-2">
       <div class="card stat-card">
@@ -1538,7 +2472,7 @@ function renderDashboardUser(data) {
     </div>
     <div class="card">
       <div class="card-header"><div class="card-title">📋 Status Absen Hari Ini</div></div>
-      <div class="flex gap-2 items-center">
+      <div class="flex gap-2 items-center flex-wrap">
         <span class="badge ${data.sudahDatang ? 'badge-green' : 'badge-red'}">Datang: ${data.sudahDatang ? '✓ Sudah' : '✗ Belum'}</span>
         <span class="badge ${data.sudahPulang ? 'badge-green' : 'badge-red'}">Pulang: ${data.sudahPulang ? '✓ Sudah' : '✗ Belum'}</span>
       </div>
@@ -1571,7 +2505,6 @@ function renderProfil() {
   if(!profilData) return;
   const u = profilData;
   const isUser = AppState.user && AppState.user.role === 'USER';
-
   $('#profil-readonly').innerHTML = `
     <div class="grid grid-2">
       <div class="card">
@@ -1598,14 +2531,12 @@ function renderProfil() {
       </div>
       <div class="card">
         <div class="card-header"><div class="card-title">🪪 ID Card Digital</div></div>
-        <div id="id-card-preview-area" style="margin-bottom:1rem;"></div>
+        <div id="id-card-preview-area" style="margin-bottom:1.25rem;"></div>
         <button class="btn btn-primary btn-block" id="btn-download-idcard">⬇️ Download ID Card (PDF)</button>
       </div>
     </div>
   `;
-
   renderIdCardPreview(u);
-
   if(isUser) {
     $('#btn-edit-profil').classList.remove('hidden');
   } else {
@@ -1630,9 +2561,9 @@ function renderIdCardPreview(u) {
       </div>
       <div class="id-card-sppg">${escapeHtml(u.SPPG||'')}</div>
       <div class="id-card-qr" id="id-card-qr"></div>
+      <div class="id-card-company">Sistem Absensi</div>
     </div>
   `;
-  // Generate QR
   if(typeof QRCode !== 'undefined' && qrData) {
     new QRCode($('#id-card-qr'), { text: qrData, width: 60, height: 60 });
   }
@@ -1684,7 +2615,6 @@ async function startWajahCapture(videoId, canvasId, statusId) {
     AppState.videoStream = stream;
     video.srcObject = stream;
     video.play();
-
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
@@ -1724,28 +2654,20 @@ async function downloadIdCard() {
   try {
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: [86, 54] });
-
-    // Background
     pdf.setFillColor(255,255,255);
     pdf.rect(0,0,86,54,'F');
-
-    // Photo
     if(profilData.URL_Foto_Profil) {
       try {
         const img = await loadImage(profilData.URL_Foto_Profil);
         pdf.addImage(img, 'JPEG', 5, 5, 20, 20);
       } catch(e) {}
     }
-
-    // Text
     pdf.setFontSize(10);
     pdf.setTextColor(0,0,0);
     pdf.text(profilData.Nama_Lengkap || '', 28, 12);
     pdf.setFontSize(8);
     pdf.text(profilData.Jabatan_Divisi || '', 28, 18);
     pdf.text(profilData.SPPG || '', 28, 24);
-
-    // QR
     const qrCanvas = document.createElement('canvas');
     await new Promise(resolve => {
       new QRCode(qrCanvas, { text: profilData.ID_Card_Unik || '', width: 60, height: 60, correctLevel: QRCode.CorrectLevel.H });
@@ -1753,10 +2675,7 @@ async function downloadIdCard() {
     });
     const qrDataUrl = qrCanvas.toDataURL('image/png');
     pdf.addImage(qrDataUrl, 'PNG', 70, 38, 12, 12);
-
     const pdfBase64 = pdf.output('datauristring');
-
-    // Upload to Drive
     const res = await apiCallWithToken('updateIdCard', { pdfBase64 });
     if(res.url) {
       pdf.save('ID_Card_' + profilData.ID_Card_Unik + '.pdf');
@@ -1805,7 +2724,6 @@ async function showUserDetail(idUser) {
     const res = await apiCallWithToken('getAllUsers', {});
     const user = res.users.find(u => u.ID_User === idUser);
     if(!user) return;
-
     $('#modal-user-detail .modal-body').innerHTML = `
       <div class="form-row form-row-2">
         <div class="form-group"><label class="form-label">Nama Lengkap</label><input class="form-input" id="mu-nama" value="${escapeHtml(user.Nama_Lengkap||'')}"></div>
@@ -1881,14 +2799,14 @@ async function initDataKaryawan() {
     const tbody = $('#table-karyawan tbody');
     tbody.innerHTML = res.karyawan.map(k => `
       <tr>
-        <td>${escapeHtml(k.namaLengkap)}</td>
-        <td>${escapeHtml(k.jabatanDivisi)}</td>
-        <td>${escapeHtml(k.jenisKelamin)}</td>
-        <td>${escapeHtml(k.email)}</td>
-        <td>${escapeHtml(k.noWhatsapp)}</td>
-        <td>${formatDate(k.tanggalMulaiKerja)}</td>
-        <td>${escapeHtml(k.sppg)}</td>
-        <td>${formatRupiah(k.gajiHarian)}</td>
+        <td data-label="Nama">${escapeHtml(k.namaLengkap)}</td>
+        <td data-label="Jabatan">${escapeHtml(k.jabatanDivisi)}</td>
+        <td data-label="JK">${escapeHtml(k.jenisKelamin)}</td>
+        <td data-label="Email">${escapeHtml(k.email)}</td>
+        <td data-label="Whatsapp">${escapeHtml(k.noWhatsapp)}</td>
+        <td data-label="Mulai Kerja">${formatDate(k.tanggalMulaiKerja)}</td>
+        <td data-label="SPPG">${escapeHtml(k.sppg)}</td>
+        <td data-label="Gaji Harian">${formatRupiah(k.gajiHarian)}</td>
       </tr>
     `).join('');
   } catch(e) { showAlert(e); }
@@ -1910,11 +2828,11 @@ function renderPayrollTable() {
   const tbody = $('#table-payroll tbody');
   tbody.innerHTML = payrollKaryawan.map(k => `
     <tr>
-      <td><input type="checkbox" class="payroll-check" data-id="${k.idUser}" onchange="togglePayrollSelect('${k.idUser}')"></td>
-      <td>${escapeHtml(k.namaLengkap)}</td>
-      <td>${escapeHtml(k.jabatanDivisi)}</td>
-      <td>${escapeHtml(k.sppg)}</td>
-      <td>${formatRupiah(k.gajiHarian)}</td>
+      <td data-label="Pilih"><input type="checkbox" class="payroll-check" data-id="${k.idUser}" onchange="togglePayrollSelect('${k.idUser}')"></td>
+      <td data-label="Nama">${escapeHtml(k.namaLengkap)}</td>
+      <td data-label="Jabatan">${escapeHtml(k.jabatanDivisi)}</td>
+      <td data-label="SPPG">${escapeHtml(k.sppg)}</td>
+      <td data-label="Gaji Harian">${formatRupiah(k.gajiHarian)}</td>
     </tr>
   `).join('');
 }
@@ -1928,22 +2846,18 @@ function togglePayrollSelect(idUser) {
 function showPayrollModal() {
   if(selectedPayrollKaryawan.length === 0) { showAlert('Pilih minimal 1 karyawan'); return; }
   $('#modal-payroll').classList.add('show');
-
-  // Init signature pad
   setTimeout(() => {
     const canvas = document.getElementById('signature-pad');
     if(canvas && typeof SignaturePad !== 'undefined') {
       AppState.signaturePad = new SignaturePad(canvas, { backgroundColor: 'rgb(250,250,250)' });
     }
   }, 300);
-
-  // Render inputs per karyawan
   const container = $('#payroll-karyawan-inputs');
   container.innerHTML = selectedPayrollKaryawan.map(id => {
     const k = payrollKaryawan.find(x => x.idUser === id);
     return `
-      <div class="card" style="margin-bottom:0.75rem; padding:1rem;">
-        <div style="font-weight:600; margin-bottom:0.5rem;">${escapeHtml(k.namaLengkap)} (${escapeHtml(k.jabatanDivisi)})</div>
+      <div class="card" style="margin-bottom:0.75rem; padding:1.25rem;">
+        <div style="font-weight:600; margin-bottom:0.75rem; font-size:1rem;">${escapeHtml(k.namaLengkap)} (${escapeHtml(k.jabatanDivisi)})</div>
         <div class="form-row form-row-3">
           <div class="form-group"><label class="form-label">Bonus (Rp)</label><input class="form-input payroll-bonus" data-id="${id}" type="number" value="0"></div>
           <div class="form-group"><label class="form-label">Lembur (Rp)</label><input class="form-input payroll-lembur" data-id="${id}" type="number" value="0"></div>
@@ -1959,7 +2873,6 @@ async function acceptPayroll() {
   const periodeMulai = $('#payroll-mulai').value;
   const periodeAkhir = $('#payroll-akhir').value;
   if(!periodeMulai || !periodeAkhir) { showAlert('Periode wajib diisi'); return; }
-
   const karyawanData = selectedPayrollKaryawan.map(id => {
     const k = payrollKaryawan.find(x => x.idUser === id);
     return {
@@ -1971,12 +2884,10 @@ async function acceptPayroll() {
       keteranganPotongan: $(`.payroll-keterangan[data-id="${id}"]`).value || ''
     };
   });
-
   let tandaTanganBase64 = '';
   if(AppState.signaturePad && !AppState.signaturePad.isEmpty()) {
     tandaTanganBase64 = AppState.signaturePad.toDataURL('image/png');
   }
-
   try {
     const res = await apiCallWithToken('prosesPayroll', {
       periodeMulai, periodeAkhir, karyawanData, tandaTanganBase64
@@ -1995,10 +2906,10 @@ async function initMyPayroll() {
     const tbody = $('#table-my-payroll tbody');
     tbody.innerHTML = res.payroll.map(p => `
       <tr>
-        <td>${formatDate(p.periodeMulai)} - ${formatDate(p.periodeAkhir)}</td>
-        <td>${p.jumlahHariKerja}</td>
-        <td>${formatRupiah(p.totalGaji)}</td>
-        <td class="actions">
+        <td data-label="Periode">${formatDate(p.periodeMulai)} - ${formatDate(p.periodeAkhir)}</td>
+        <td data-label="Hari Kerja">${p.jumlahHariKerja}</td>
+        <td data-label="Total Gaji">${formatRupiah(p.totalGaji)}</td>
+        <td data-label="Aksi" class="actions">
           ${p.urlPdf ? `<a href="${p.urlPdf}" target="_blank" class="btn btn-sm btn-outline">Lihat PDF</a>` : '<span class="text-muted">-</span>'}
         </td>
       </tr>
@@ -2018,14 +2929,14 @@ function renderAbsensiTable(data) {
   const tbody = $('#table-absensi tbody');
   tbody.innerHTML = data.map(a => `
     <tr>
-      <td>${formatDate(a.Tanggal)}</td>
-      <td>${escapeHtml(a.namaLengkap)}</td>
-      <td>${escapeHtml(a.jabatanDivisi)}</td>
-      <td>${escapeHtml(a.sppg)}</td>
-      <td>${a.Jenis_Absen}</td>
-      <td>${a.Waktu_Timestamp ? new Date(a.Waktu_Timestamp).toLocaleTimeString('id-ID') : '-'}</td>
-      <td>${a.Skor_Kecocokan_Wajah ? (parseFloat(a.Skor_Kecocokan_Wajah)*100).toFixed(1) + '%' : '-'}</td>
-      <td><span class="badge ${a.Status_Validasi==='VALID'?'badge-green':'badge-red'}">${a.Status_Validasi}</span></td>
+      <td data-label="Tanggal">${formatDate(a.Tanggal)}</td>
+      <td data-label="Nama">${escapeHtml(a.namaLengkap)}</td>
+      <td data-label="Jabatan">${escapeHtml(a.jabatanDivisi)}</td>
+      <td data-label="SPPG">${escapeHtml(a.sppg)}</td>
+      <td data-label="Jenis">${a.Jenis_Absen}</td>
+      <td data-label="Waktu">${a.Waktu_Timestamp ? new Date(a.Waktu_Timestamp).toLocaleTimeString('id-ID') : '-'}</td>
+      <td data-label="Skor Wajah">${a.Skor_Kecocokan_Wajah ? (parseFloat(a.Skor_Kecocokan_Wajah)*100).toFixed(1) + '%' : '-'}</td>
+      <td data-label="Status"><span class="badge ${a.Status_Validasi==='VALID'?'badge-green':'badge-red'}">${a.Status_Validasi}</span></td>
     </tr>
   `).join('');
 }
@@ -2043,13 +2954,12 @@ async function filterAbsensi() {
 }
 
 // ==================== DEVICE ABSEN ====================
-let deviceStep = 'idle'; // idle, qr, face, result
+let deviceStep = 'idle';
 let deviceIdUser = null;
 let deviceFaceDescriptor = null;
 
 function initDeviceAbsen() {
   resetDeviceFlow();
-  // Live clock
   function updateClock() {
     const now = new Date();
     const clock = $('#device-clock');
@@ -2077,8 +2987,6 @@ function resetDeviceFlow() {
   $('#device-step-result').classList.add('hidden');
 }
 
-// Helper: ambil pesan error yang jelas dari berbagai bentuk error
-// (Error object, string, DOMException, atau object custom dari library)
 function getErrorMessage(err) {
   if (!err) return 'Error tidak diketahui (kosong)';
   if (typeof err === 'string') return err;
@@ -2093,15 +3001,11 @@ async function startDeviceFlow() {
   deviceStep = 'qr';
   $('#device-step-idle').classList.add('hidden');
   $('#device-step-qr').classList.remove('hidden');
-
-  // Cek dulu apakah browser punya akses ke API kamera sama sekali
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
     showAlert('Browser ini tidak mendukung akses kamera (mediaDevices tidak tersedia). Pastikan diakses lewat HTTPS dan browser modern (Chrome/Safari terbaru).');
     resetDeviceFlow();
     return;
   }
-
-  // Cek daftar kamera yang tersedia
   try {
     availableCameras = await Html5Qrcode.getCameras();
   } catch (e) {
@@ -2109,32 +3013,22 @@ async function startDeviceFlow() {
     resetDeviceFlow();
     return;
   }
-
   if (!availableCameras || availableCameras.length === 0) {
     showAlert('Tidak ada kamera yang terdeteksi di perangkat ini.');
     resetDeviceFlow();
     return;
   }
-
-  // Isi dropdown pilihan kamera. Default terpilih: kamera belakang kalau ada,
-  // kalau tidak ada fallback ke kamera pertama.
   const select = $('#qr-camera-select');
   const backIndex = availableCameras.findIndex(c => /back|rear|environment/i.test(c.label || ''));
   const defaultIndex = backIndex >= 0 ? backIndex : 0;
-
   select.innerHTML = availableCameras.map((c, i) => {
     let label = c.label || `Kamera ${i + 1}`;
     if (/back|rear|environment/i.test(label)) label += ' (Belakang)';
     else if (/front|user|face/i.test(label)) label += ' (Depan)';
     return `<option value="${i}" ${i === defaultIndex ? 'selected' : ''}>${escapeHtml(label)}</option>`;
   }).join('');
-
-  // Tampilkan dropdown hanya kalau ada lebih dari 1 kamera
   $('#qr-camera-select-group').classList.toggle('hidden', availableCameras.length <= 1);
-
-  // Mulai scanner dengan kamera default. Kalau user ganti pilihan, scanner di-restart.
   await startQrScannerWithCamera(availableCameras[defaultIndex].id);
-
   select.onchange = () => {
     const chosen = availableCameras[parseInt(select.value)];
     if (chosen) restartQrScanner(chosen.id);
@@ -2174,23 +3068,18 @@ async function restartQrScanner(newCameraId) {
 
 function applyUserUI() {
   if(!AppState.user && !AppState.device) return;
-
   if(AppState.device) {
-    // Mode device: sembunyikan seluruh nav kecuali Logout
     $('#sidebar-nama').textContent = AppState.device.namaDevice || 'Device';
     $('#sidebar-role').textContent = 'DEVICE ABSEN';
     $('#header-nama').textContent = AppState.device.namaDevice || '';
     $$('.nav-item[data-page]').forEach(n => n.classList.add('hidden'));
     return;
   }
-
   $('#sidebar-nama').textContent = AppState.user.nama || '-';
   $('#sidebar-role').textContent = AppState.user.role || '-';
   $('#header-nama').textContent = AppState.user.nama || '';
   if(AppState.user.fotoProfil) $('#sidebar-foto').src = AppState.user.fotoProfil;
-
   const role = AppState.user.role;
-  // Reset semua dulu
   $$('.nav-item[data-page]').forEach(n => n.classList.remove('hidden'));
   $$('.nav-item.admin-only').forEach(n => n.classList.toggle('hidden', role !== 'ADMIN'));
   $$('.nav-item.akuntan-only').forEach(n => n.classList.toggle('hidden', !(role === 'ADMIN' || role === 'AKUNTAN')));
@@ -2213,18 +3102,16 @@ async function handleQrScanned(idCardUnik) {
   }
 }
 
-const FACE_MATCH_THRESHOLD = 60; // persen kecocokan minimum agar absensi dianggap VALID
+const FACE_MATCH_THRESHOLD = 60;
 
 async function startFaceScan() {
   if(!AppState.modelsLoaded) await loadFaceApiModels();
   const video = $('#device-face-video');
-
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
     AppState.videoStream = stream;
     video.srcObject = stream;
     video.play();
-
     let attempts = 0;
     const interval = setInterval(async () => {
       attempts++;
@@ -2234,17 +3121,15 @@ async function startFaceScan() {
         const refDesc = new Float32Array(deviceFaceDescriptor);
         const distance = faceapi.euclideanDistance(currentDesc, refDesc);
         const skor = (1 - distance) * 100;
-
         if(skor > FACE_MATCH_THRESHOLD) {
           clearInterval(interval);
           stopVideo();
           await recordAbsensi(deviceIdUser, skor, 'VALID');
         } else {
-          // Allow retry, show score
           $('#device-face-status').textContent = `Skor: ${skor.toFixed(1)}% - Wajah tidak cocok, tetap di posisi...`;
         }
       }
-      if(attempts > 60) { // ~30 seconds
+      if(attempts > 60) {
         clearInterval(interval);
         stopVideo();
         await recordAbsensi(deviceIdUser, 0, 'GAGAL');
@@ -2261,7 +3146,6 @@ async function recordAbsensi(idUser, skor, status) {
     if(res.success && status === 'VALID') {
       showDeviceResult(true, `${res.nama} - ${res.message} (${res.waktu})`);
     } else if (res.success && status === 'GAGAL') {
-      // Tercatat di sheet tapi statusnya gagal validasi wajah
       showDeviceResult(false, 'Absensi tidak berhasil. Wajah tidak terverifikasi (skor di bawah ' + FACE_MATCH_THRESHOLD + '%). Silakan coba lagi.');
     } else {
       showDeviceResult(false, res.message || 'Absensi tidak berhasil.');
@@ -2278,14 +3162,10 @@ function showDeviceResult(success, message) {
   $('#device-result-icon').textContent = success ? '✅' : '❌';
   $('#device-result-text').textContent = success ? message : ('⚠️ ' + message);
   $('#device-result-text').className = success ? 'text-success' : 'text-danger';
-
-  // Auto reset after 5 seconds
-  setTimeout(() => {
-    resetDeviceFlow();
-  }, 5000);
+  setTimeout(() => { resetDeviceFlow(); }, 5000);
 }
 
-// ==================== ABSEN MANUAL (user login biasa) ====================
+// ==================== ABSEN MANUAL ====================
 let absenQrScanner = null;
 let absenIdUser = null;
 let absenFaceDescriptor = null;
@@ -2301,7 +3181,6 @@ function initAbsenManual() {
   updateAbsenClock();
   if(window._absenClockInterval) clearInterval(window._absenClockInterval);
   window._absenClockInterval = setInterval(updateAbsenClock, 1000);
-
   $('#btn-absen-manual').addEventListener('click', startAbsenFlow);
   $('#btn-absen-qr-cancel').addEventListener('click', resetAbsenFlow);
   $('#btn-absen-face-cancel').addEventListener('click', resetAbsenFlow);
@@ -2404,10 +3283,10 @@ function renderAuditLog(logs) {
   const tbody = $('#table-audit tbody');
   tbody.innerHTML = logs.map(l => `
     <tr>
-      <td>${formatDateTime(l.Waktu)}</td>
-      <td>${escapeHtml(l.ID_User_Pelaku)}</td>
-      <td><span class="badge badge-blue">${escapeHtml(l.Jenis_Aktivitas)}</span></td>
-      <td>${escapeHtml(l.Detail)}</td>
+      <td data-label="Waktu">${formatDateTime(l.Waktu)}</td>
+      <td data-label="Pelaku">${escapeHtml(l.ID_User_Pelaku)}</td>
+      <td data-label="Jenis"><span class="badge badge-blue">${escapeHtml(l.Jenis_Aktivitas)}</span></td>
+      <td data-label="Detail">${escapeHtml(l.Detail)}</td>
     </tr>
   `).join('');
 }
@@ -2424,7 +3303,7 @@ async function filterAuditLog() {
   } catch(e) { showAlert(e); }
 }
 
-// ==================== GLOBAL EVENTS (delegated) ====================
+// ==================== GLOBAL EVENTS ====================
 document.addEventListener('click', e => {
   if(e.target.matches('#btn-save-user-detail')) saveUserDetail();
   if(e.target.matches('#btn-filter-absensi')) filterAbsensi();
