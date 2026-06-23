@@ -1716,6 +1716,10 @@
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
             Update Foto Profil
           </button>
+          <button id="btn-generate-idcard" class="btn btn-outline">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+            Generate ID Card
+          </button>
         </div>
       </div>
 
@@ -2518,6 +2522,7 @@ document.addEventListener('DOMContentLoaded', () => {
   $('#btn-pick-photo').addEventListener('click', () => $('#reg-photo-file').click());
   $('#reg-photo-file').addEventListener('change', handleRegPhotoFile);
   $('#btn-update-foto-profil').addEventListener('click', showUpdateFotoModal);
+  $('#btn-generate-idcard').addEventListener('click', generateIdCardManual);
   $('#btn-update-foto-kamera').addEventListener('click', captureUpdateFotoKamera);
   $('#btn-update-foto-galeri').addEventListener('click', () => $('#update-foto-file').click());
   $('#update-foto-file').addEventListener('change', handleUpdateFotoFile);
@@ -3202,6 +3207,18 @@ async function saveUpdateWajah() {
   } catch(e) { showAlert(e); }
 }
 
+async function generateIdCardManual() {
+  try {
+    const res = await apiCallWithToken('generateIdCard', {});
+    showAlert('ID Card berhasil di-generate ulang dari template', 'success');
+    if(res.url && profilData) {
+      profilData.URL_ID_Card_PDF = res.url;
+    }
+    window.open(res.url, '_blank');
+  } catch(e) {
+    showAlert('Gagal generate ID Card: ' + e);
+  }
+}
 async function downloadIdCard() {
   if(!profilData) return;
   try {
