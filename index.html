@@ -836,8 +836,8 @@
       width: 100%;
       max-width: 320px;
       aspect-ratio: 54 / 86;
-      background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-      border: 1px solid #e2e8f0; 
+      background: linear-gradient(165deg, #eff6ff 0%, #ffffff 45%, #f8fafc 100%);
+      border: 1px solid #bfdbfe; 
       border-radius: 16px; 
       padding: 1.25rem; 
       margin: 0 auto; 
@@ -850,6 +850,19 @@
       overflow: hidden;
     }
 
+    .id-card-preview::after {
+      content: '';
+      position: absolute;
+      top: -50px;
+      right: -50px;
+      width: 160px;
+      height: 160px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+      border-radius: 50%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
     .id-card-header-text {
       font-size: 0.65rem;
       font-weight: 800;
@@ -857,9 +870,13 @@
       letter-spacing: 0.04em;
       color: #1e3a8a;
       line-height: 1.5;
-      margin-bottom: 1.25rem;
       text-align: center;
-      padding: 0 0.5rem;
+      padding: 1.5rem 0.75rem 0.875rem;
+      margin: -1.25rem -1.25rem 1.25rem -1.25rem;
+      background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+      border-bottom: 2px solid #93c5fd;
+      position: relative;
+      z-index: 1;
     }
 
     .id-card-header-text .sppg-name {
@@ -927,14 +944,14 @@
     }
 
     .id-card-qr { 
-      width: 64px; 
-      height: 64px; 
+      width: 86px; 
+      height: 86px; 
       flex-shrink: 0;
       background: white;
-      padding: 4px;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+      padding: 5px;
+      border: 2px solid #93c5fd;
+      border-radius: 10px;
+      box-shadow: 0 3px 8px rgba(37,99,235,0.12);
     }
 
     .id-card-qr canvas, .id-card-qr img {
@@ -946,11 +963,11 @@
     .id-card-id-vertical {
       writing-mode: vertical-rl;
       text-orientation: mixed;
-      font-size: 0.6rem;
+      font-size: 0.65rem;
       font-weight: 700;
-      color: #64748b;
+      color: #1e40af;
       letter-spacing: 0.15em;
-      height: 64px;
+      height: 86px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -3099,7 +3116,7 @@ function renderIdCardPreview(u) {
       const qrContainer = $('#id-card-qr');
       if(qrContainer) {
         qrContainer.innerHTML = '';
-        new QRCode(qrContainer, { text: qrData, width: 56, height: 56, margin: 0, correctLevel: QRCode.CorrectLevel.H });
+        new QRCode(qrContainer, { text: qrData, width: 260, height: 260, margin: 0, correctLevel: QRCode.CorrectLevel.H });
       }
     }, 0);
   }
@@ -3189,82 +3206,124 @@ async function downloadIdCard() {
   if(!profilData) return;
   try {
     const { jsPDF } = window.jspdf;
-    // Portrait ID Card: 54mm x 86mm
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [54, 86] });
+    const W = 54, H = 86;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [W, H] });
 
-    // Background
-    pdf.setFillColor(255,255,255);
-    pdf.rect(0,0,54,86,'F');
+    // ===== Background kartu (tidak putih polos) =====
+    pdf.setFillColor(239, 246, 255); // light blue base
+    pdf.rect(0, 0, W, H, 'F');
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, 20, W, H - 20, 'F');
+
+    // Dekorasi lingkaran transparan di pojok kanan atas
+    pdf.setFillColor(219, 234, 254);
+    pdf.circle(W + 10, -10, 30, 'F');
 
     // Top strip
     pdf.setFillColor(30, 58, 138);
-    pdf.rect(0,0,54,3,'F');
+    pdf.rect(0, 0, W, 3, 'F');
+
+    // Header band berwarna
+    pdf.setFillColor(219, 234, 254);
+    pdf.rect(0, 3, W, 15.5, 'F');
+    pdf.setDrawColor(147, 197, 253);
+    pdf.setLineWidth(0.4);
+    pdf.line(0, 18.5, W, 18.5);
 
     // Header text
     pdf.setFontSize(6);
     pdf.setTextColor(30, 58, 138);
     pdf.setFont('helvetica', 'bold');
-    pdf.text('SATUAN PELAYANAN', 27, 8, { align: 'center' });
-    pdf.text('PEMENUHAN GIZI (SPPG)', 27, 11.5, { align: 'center' });
-    pdf.setFontSize(8);
-    pdf.text((profilData.SPPG || 'DARMARAJA').toUpperCase(), 27, 16, { align: 'center' });
+    pdf.text('SATUAN PELAYANAN', W / 2, 9, { align: 'center' });
+    pdf.text('PEMENUHAN GIZI (SPPG)', W / 2, 12, { align: 'center' });
+    pdf.setFontSize(8.5);
+    pdf.setTextColor(30, 64, 175);
+    pdf.text((profilData.SPPG || 'DARMARAJA').toUpperCase(), W / 2, 16.5, { align: 'center' });
 
-    // Photo circle (simulate with rect clip, or just square with border radius approximation)
-    // jsPDF doesn't support native clip, so we draw a square with border
-    const photoY = 20;
-    if(profilData.URL_Foto_Profil) {
+    // ===== Foto (di-crop bulat sungguhan, bukan persegi) =====
+    const cx = W / 2, cy = 31, r = 12;
+    pdf.setFillColor(255, 255, 255);
+    pdf.circle(cx, cy, r + 1.5, 'F');
+    pdf.setDrawColor(59, 130, 246);
+    pdf.setLineWidth(0.6);
+    pdf.circle(cx, cy, r + 1.5, 'S');
+
+    if (profilData.URL_Foto_Profil) {
       try {
         const img = await loadImage(profilData.URL_Foto_Profil);
-        pdf.addImage(img, 'JPEG', 17, photoY, 20, 20);
-      } catch(e) {}
+        pdf.saveGraphicsState();
+        pdf.ellipse(cx, cy, r, r, null); // path lingkaran (tanpa fill/stroke)
+        pdf.clip(); // crop gambar mengikuti lingkaran
+        const size = r * 2;
+        const ratio = img.width / img.height;
+        let dw = size, dh = size, dx = cx - size / 2, dy = cy - size / 2;
+        if (ratio > 1) { dw = size * ratio; dx = cx - dw / 2; }
+        else if (ratio < 1) { dh = size / ratio; dy = cy - dh / 2; }
+        pdf.addImage(img, 'JPEG', dx, dy, dw, dh);
+        pdf.restoreGraphicsState();
+      } catch (e) {}
+    } else {
+      pdf.setFillColor(226, 232, 240);
+      pdf.circle(cx, cy, r, 'F');
     }
-    // Draw circle border around photo area
-    pdf.setDrawColor(219, 234, 254);
-    pdf.setLineWidth(0.8);
-    pdf.ellipse(27, photoY + 10, 11, 11, 'S');
 
-    // Name & Role
-    pdf.setFontSize(10);
+    // ===== Nama & Jabatan =====
+    pdf.setFontSize(10.5);
     pdf.setTextColor(15, 23, 42);
     pdf.setFont('helvetica', 'bold');
-    const nama = profilData.Nama_Lengkap || '';
-    pdf.text(nama, 27, photoY + 26, { align: 'center' });
+    pdf.text(profilData.Nama_Lengkap || '', W / 2, 48, { align: 'center' });
 
     pdf.setFontSize(7);
     pdf.setTextColor(71, 85, 105);
     pdf.setFont('helvetica', 'normal');
-    pdf.text((profilData.Jabatan_Divisi || '').toUpperCase(), 27, photoY + 30, { align: 'center' });
+    pdf.text((profilData.Jabatan_Divisi || '').toUpperCase(), W / 2, 52.5, { align: 'center' });
 
-    // QR Code
-    const qrCanvas = document.createElement('canvas');
-    await new Promise(resolve => {
-      new QRCode(qrCanvas, { text: profilData.ID_Card_Unik || '', width: 80, height: 80, margin: 0, correctLevel: QRCode.CorrectLevel.H });
-      setTimeout(resolve, 500);
-    });
-    const qrDataUrl = qrCanvas.toDataURL('image/png');
-    pdf.addImage(qrDataUrl, 'PNG', 8, 62, 14, 14);
+    // Divider
+    pdf.setDrawColor(203, 213, 225);
+    pdf.setLineWidth(0.3);
+    pdf.line(6, 57, W - 6, 57);
 
-    // Vertical ID text
-    pdf.setFontSize(5);
-    pdf.setTextColor(100, 116, 139);
-    pdf.setFont('courier', 'bold');
-    const idText = profilData.ID_Card_Unik || '';
-    // Draw vertical text manually
-    for(let i = 0; i < idText.length; i++) {
-      pdf.text(idText[i], 24, 64 + (i * 2.5), { align: 'center' });
+    // ===== Kotak QR berwarna =====
+    const qrBoxY = 60, qrBoxH = 19;
+    pdf.setFillColor(241, 245, 249);
+    pdf.roundedRect(5, qrBoxY, W - 10, qrBoxH, 2, 2, 'F');
+    pdf.setDrawColor(191, 219, 254);
+    pdf.setLineWidth(0.3);
+    pdf.roundedRect(5, qrBoxY, W - 10, qrBoxH, 2, 2, 'S');
+
+    // QR Code resolusi tinggi (anti buram)
+    const qrDiv = document.createElement('div');
+    new QRCode(qrDiv, { text: profilData.ID_Card_Unik || '', width: 300, height: 300, correctLevel: QRCode.CorrectLevel.H });
+    await new Promise(resolve => setTimeout(resolve, 350));
+    const qrCanvasEl = qrDiv.querySelector('canvas');
+    const qrImgEl = qrDiv.querySelector('img');
+    const qrDataUrl = qrCanvasEl ? qrCanvasEl.toDataURL('image/png') : (qrImgEl ? qrImgEl.src : '');
+
+    const qrSize = 16;
+    pdf.setFillColor(255, 255, 255);
+    pdf.roundedRect(8, qrBoxY + 1.5, qrSize, qrSize, 1.5, 1.5, 'F');
+    if (qrDataUrl) {
+      pdf.addImage(qrDataUrl, 'PNG', 8.8, qrBoxY + 2.3, qrSize - 1.6, qrSize - 1.6);
     }
 
-    // Footer note
-    pdf.setFontSize(4.5);
-    pdf.setTextColor(148, 163, 184);
+    // ID vertikal di samping QR
+    pdf.setFontSize(6.5);
+    pdf.setTextColor(30, 64, 175);
+    pdf.setFont('courier', 'bold');
+    const idText = (profilData.ID_Card_Unik || '').split('').join(' ');
+    pdf.text(idText, 38, qrBoxY + qrBoxH / 2, { align: 'center', angle: 90 });
+
+    // ===== Footer note =====
+    pdf.setFontSize(4.4);
+    pdf.setTextColor(100, 116, 139);
     pdf.setFont('helvetica', 'normal');
-    const footerText = `ID Card ini adalah tanda pengenal karyawan SPPG ${profilData.SPPG || 'DARMARAJA'} yang sah dan berlaku selama menjadi karyawan.`;
-    const splitFooter = pdf.splitTextToSize(footerText, 48);
-    pdf.text(splitFooter, 27, 80, { align: 'center' });
+    const footerText = `ID Card ini adalah tanda pengenal karyawan Satuan Pelayanan Pemenuhan Gizi (SPPG) ${profilData.SPPG || 'DARMARAJA'} yang sah dan berlaku selama menjadi karyawan.`;
+    const splitFooter = pdf.splitTextToSize(footerText, W - 10);
+    pdf.text(splitFooter, W / 2, 80, { align: 'center' });
 
     pdf.save('ID_Card_' + profilData.ID_Card_Unik + '.pdf');
     showAlert('ID Card berhasil di-generate', 'success');
-  } catch(e) { showAlert('Gagal generate ID Card: ' + e); }
+  } catch (e) { showAlert('Gagal generate ID Card: ' + e); }
 }
 
 function loadImage(src) {
