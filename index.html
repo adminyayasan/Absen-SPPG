@@ -3072,9 +3072,9 @@ function renderProfil() {
       <div class="card">
         <div class="card-header"><div class="card-title">${ICONS.image} ID Card Digital</div></div>
         <div id="id-card-preview-area" style="margin-bottom:1.25rem;"></div>
-        <button class="btn btn-primary btn-block" id="btn-download-idcard">
+        <a class="btn btn-primary btn-block" id="btn-download-idcard" href="${u.URL_ID_Card_PDF || '#'}" target="_blank" rel="noopener" ${!u.URL_ID_Card_PDF ? 'style="opacity:0.6; pointer-events:none;"' : ''}>
           ${ICONS.download} Download ID Card (PDF)
-        </button>
+        </a>
       </div>
     </div>
   `;
@@ -3088,43 +3088,40 @@ function renderProfil() {
 
 function isActive(val) { return val === true || val === 'TRUE' || val === '1' || val === 'true'; }
 
+// Mengubah URL file Drive (format /file/d/{id}/view) jadi URL embed preview
+// yang bisa dimasukkan ke <iframe> tanpa memicu halaman download paksa.
+function getDrivePreviewUrl(driveUrl) {
+  if (!driveUrl) return '';
+  const match = driveUrl.match(/[-\w]{25,}/);
+  if (!match) return '';
+  return 'https://drive.google.com/file/d/' + match[0] + '/preview';
+}
+
 function renderIdCardPreview(u) {
   const container = $('#id-card-preview-area');
   if(!container) return;
-  const sppgName = escapeHtml(u.SPPG || 'DARMARAJA');
-  const qrData = u.ID_Card_Unik || '';
+  const pdfUrl = u.URL_ID_Card_PDF || '';
+
+  if (!pdfUrl) {
+    container.innerHTML = `
+      <div class="empty-state" style="padding:2rem 1rem;">
+        <div class="empty-state-icon">${ICONS.image}</div>
+        <div style="font-weight:600; margin-bottom:0.5rem;">ID Card belum dibuat</div>
+        <div class="text-muted" style="font-size:0.875rem;">Klik tombol "Generate ID Card" di bawah untuk membuat ID Card depan &amp; belakang dari template.</div>
+      </div>
+    `;
+    return;
+  }
+
+  const previewUrl = getDrivePreviewUrl(pdfUrl);
   container.innerHTML = `
-    <div class="id-card-preview" id="id-card-render">
-      <div class="id-card-company-strip"></div>
-      <div class="id-card-header-text">
-        SATUAN PELAYANAN PEMENUHAN GIZI (SPPG)<br>
-        <span class="sppg-name">${sppgName}</span>
-      </div>
-      <div class="id-card-photo-frame">
-        <img src="${u.URL_Foto_Profil || 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'}" class="id-card-photo" onerror="this.src='data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'">
-      </div>
-      <div class="id-card-name">${escapeHtml(u.Nama_Lengkap||'')}</div>
-      <div class="id-card-role">${escapeHtml(u.Jabatan_Divisi||'')}</div>
-      <div class="id-card-bottom">
-        <div class="id-card-qr-wrap">
-          <div class="id-card-qr" id="id-card-qr"></div>
-          <div class="id-card-id-vertical">${escapeHtml(qrData)}</div>
-        </div>
-      </div>
-      <div class="id-card-footer-note">
-        ID Card ini adalah tanda pengenal karyawan Satuan Pelayanan Pemenuhan Gizi (SPPG) ${sppgName} yang sah dan berlaku selama menjadi karyawan.
-      </div>
+    <div style="border:1px solid var(--border); border-radius:var(--radius-lg); overflow:hidden; background:#f8fafc;">
+      <iframe src="${previewUrl}" style="width:100%; height:480px; border:none; display:block;" allow="autoplay"></iframe>
+    </div>
+    <div class="text-muted" style="font-size:0.75rem; margin-top:0.5rem; text-align:center;">
+      ID Card 2 sisi (depan &amp; belakang) — hasil generate dari template resmi
     </div>
   `;
-  if(typeof QRCode !== 'undefined' && qrData) {
-    setTimeout(() => {
-      const qrContainer = $('#id-card-qr');
-      if(qrContainer) {
-        qrContainer.innerHTML = '';
-        new QRCode(qrContainer, { text: qrData, width: 260, height: 260, margin: 0, correctLevel: QRCode.CorrectLevel.H });
-      }
-    }, 0);
-  }
 }
 
 function toggleProfilEdit(enable) {
@@ -3214,83 +3211,11 @@ async function generateIdCardManual() {
     if(res.url && profilData) {
       profilData.URL_ID_Card_PDF = res.url;
     }
-    window.open(res.url, '_blank');
+    renderProfil();
   } catch(e) {
     showAlert('Gagal generate ID Card: ' + e);
   }
 }
-async function downloadIdCard() {
-  if(!profilData) return;
-  try {
-    const { jsPDF } = window.jspdf;
-    const W = 54, H = 86;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: [W, H] });
-
-    // ===== Background kartu (tidak putih polos) =====
-    pdf.setFillColor(239, 246, 255); // light blue base
-    pdf.rect(0, 0, W, H, 'F');
-    pdf.setFillColor(255, 255, 255);
-    pdf.rect(0, 20, W, H - 20, 'F');
-
-    // Dekorasi lingkaran transparan di pojok kanan atas
-    pdf.setFillColor(219, 234, 254);
-    pdf.circle(W + 10, -10, 30, 'F');
-
-    // Top strip
-    pdf.setFillColor(30, 58, 138);
-    pdf.rect(0, 0, W, 3, 'F');
-
-    // Header band berwarna
-    pdf.setFillColor(219, 234, 254);
-    pdf.rect(0, 3, W, 15.5, 'F');
-    pdf.setDrawColor(147, 197, 253);
-    pdf.setLineWidth(0.4);
-    pdf.line(0, 18.5, W, 18.5);
-
-    // Header text
-    pdf.setFontSize(6);
-    pdf.setTextColor(30, 58, 138);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('SATUAN PELAYANAN', W / 2, 9, { align: 'center' });
-    pdf.text('PEMENUHAN GIZI (SPPG)', W / 2, 12, { align: 'center' });
-    pdf.setFontSize(8.5);
-    pdf.setTextColor(30, 64, 175);
-    pdf.text((profilData.SPPG || 'DARMARAJA').toUpperCase(), W / 2, 16.5, { align: 'center' });
-
-    // ===== Foto (di-crop bulat sungguhan, bukan persegi) =====
-    const cx = W / 2, cy = 31, r = 12;
-    pdf.setFillColor(255, 255, 255);
-    pdf.circle(cx, cy, r + 1.5, 'F');
-    pdf.setDrawColor(59, 130, 246);
-    pdf.setLineWidth(0.6);
-    pdf.circle(cx, cy, r + 1.5, 'S');
-
-    if (profilData.URL_Foto_Profil) {
-      try {
-        const img = await loadImage(profilData.URL_Foto_Profil);
-        pdf.saveGraphicsState();
-        pdf.ellipse(cx, cy, r, r, null); // path lingkaran (tanpa fill/stroke)
-        pdf.clip(); // crop gambar mengikuti lingkaran
-        const size = r * 2;
-        const ratio = img.width / img.height;
-        let dw = size, dh = size, dx = cx - size / 2, dy = cy - size / 2;
-        if (ratio > 1) { dw = size * ratio; dx = cx - dw / 2; }
-        else if (ratio < 1) { dh = size / ratio; dy = cy - dh / 2; }
-        pdf.addImage(img, 'JPEG', dx, dy, dw, dh);
-        pdf.restoreGraphicsState();
-      } catch (e) {}
-    } else {
-      pdf.setFillColor(226, 232, 240);
-      pdf.circle(cx, cy, r, 'F');
-    }
-
-    // ===== Nama & Jabatan =====
-    pdf.setFontSize(10.5);
-    pdf.setTextColor(15, 23, 42);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text(profilData.Nama_Lengkap || '', W / 2, 48, { align: 'center' });
-
-    pdf.setFontSize(7);
     pdf.setTextColor(71, 85, 105);
     pdf.setFont('helvetica', 'normal');
     pdf.text((profilData.Jabatan_Divisi || '').toUpperCase(), W / 2, 52.5, { align: 'center' });
@@ -3967,7 +3892,6 @@ document.addEventListener('click', e => {
   if(e.target.matches('#btn-save-user-detail')) saveUserDetail();
   if(e.target.matches('#btn-filter-absensi')) filterAbsensi();
   if(e.target.matches('#btn-filter-audit')) filterAuditLog();
-  if(e.target.matches('#btn-download-idcard')) downloadIdCard();
 });
 </script>
 </body>
