@@ -3078,15 +3078,14 @@ async function captureFace() {
           if(guide) guide.className = 'face-guide liveness-warn';
           statusBox.className = 'liveness-status-box warn';
           statusBox.textContent = '➡ Tengok ke KANAN';
-          // Jika sudah mulai tengok kanan, lanjut ke fase berikutnya
-          if(yaw > YAW_THRESHOLD) livenessState.phase = 'right';
+          if(yaw < -YAW_THRESHOLD) livenessState.phase = 'right';
           break;
 
         case 'right':
           if(guide) guide.className = 'face-guide liveness-warn';
           statusBox.className = 'liveness-status-box warn';
           statusBox.textContent = '⬅ Sekarang tengok ke KIRI';
-          if(yaw < -YAW_THRESHOLD) livenessState.phase = 'left';
+          if(yaw > YAW_THRESHOLD) livenessState.phase = 'left';
           break;
 
         case 'left':
@@ -3858,13 +3857,13 @@ async function startWajahCapture(videoId, canvasId, statusId) {
           if(guide) guide.className='face-guide liveness-warn';
           if(statusBox) { statusBox.className='liveness-status-box warn'; statusBox.textContent='➡ Tengok ke KANAN'; }
           if(statusEl) statusEl.textContent='Tengok ke kanan...';
-          if(yaw > YAW_THR) wPhase='right';
+          if(yaw < -YAW_THR) wPhase='right';
           break;
         case 'right':
           if(guide) guide.className='face-guide liveness-warn';
           if(statusBox) { statusBox.className='liveness-status-box warn'; statusBox.textContent='⬅ Sekarang tengok ke KIRI'; }
           if(statusEl) statusEl.textContent='Sekarang tengok ke kiri...';
-          if(yaw < -YAW_THR) wPhase='left';
+          if(yaw > YAW_THR) wPhase='left';
           break;
         case 'left':
           if(guide) guide.className='face-guide liveness-warn';
@@ -4484,13 +4483,13 @@ async function startFaceScan() {
           if(guide) guide.className='face-guide liveness-warn';
           if(statusBox){statusBox.className='liveness-status-box warn';statusBox.textContent='➡ Tengok ke KANAN';}
           if(statusEl) statusEl.textContent='Tengok ke kanan...';
-          if(yaw > YAW_THR_D) dPhase='right';
+          if(yaw < -YAW_THR_D) dPhase='right';
           break;
         case 'right':
           if(guide) guide.className='face-guide liveness-warn';
           if(statusBox){statusBox.className='liveness-status-box warn';statusBox.textContent='⬅ Sekarang tengok ke KIRI';}
           if(statusEl) statusEl.textContent='Sekarang tengok ke kiri...';
-          if(yaw < -YAW_THR_D) dPhase='left';
+          if(yaw > YAW_THR_D) dPhase='left';
           break;
         case 'left':
           if(guide) guide.className='face-guide liveness-warn';
@@ -4704,13 +4703,13 @@ async function startAbsenFaceScan() {
           if(guide) guide.className='face-guide liveness-warn';
           if(statusBox){statusBox.className='liveness-status-box warn';statusBox.textContent='➡ Tengok ke KANAN';}
           if(statusEl) statusEl.textContent='Tengok ke kanan...';
-          if(yaw > YAW_THR_A) aPhase='right';
+          if(yaw < -YAW_THR_A) aPhase='right';
           break;
         case 'right':
           if(guide) guide.className='face-guide liveness-warn';
           if(statusBox){statusBox.className='liveness-status-box warn';statusBox.textContent='⬅ Sekarang tengok ke KIRI';}
           if(statusEl) statusEl.textContent='Sekarang tengok ke kiri...';
-          if(yaw < -YAW_THR_A) aPhase='left';
+          if(yaw > YAW_THR_A) aPhase='left';
           break;
         case 'left':
           if(guide) guide.className='face-guide liveness-warn';
