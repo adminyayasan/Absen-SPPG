@@ -1879,6 +1879,10 @@
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
         <span class="nav-item-text">Dashboard</span>
       </div>
+      <div class="nav-item" data-page="absen-manual">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        <span class="nav-item-text">Absen</span>
+      </div>
       <div class="nav-item" data-page="profil">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span class="nav-item-text">Profil</span>
@@ -1906,10 +1910,6 @@
       <div class="nav-item admin-only" data-page="audit-log">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span class="nav-item-text">Catatan Aktivitas</span>
-      </div>
-      <div class="nav-item" data-page="absen-manual">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        <span class="nav-item-text">Absen</span>
       </div>
       <div class="nav-item logout" id="btn-logout-sidebar">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
@@ -2169,7 +2169,7 @@
           <div class="table-container">
             <table class="data-table" id="table-karyawan">
               <thead>
-                <tr><th>Nama</th><th>Jabatan</th><th>JK</th><th>Email</th><th>Whatsapp</th><th>Mulai Kerja</th><th>SPPG</th><th>Gaji Harian</th></tr>
+                <tr><th>Nama</th><th>Role</th><th>Jabatan</th><th>JK</th><th>Email</th><th>Whatsapp</th><th>Mulai Kerja</th><th>SPPG</th><th>Gaji Harian</th><th>Status</th></tr>
               </thead>
               <tbody></tbody>
             </table>
@@ -2190,14 +2190,16 @@
               Proses Payroll
             </button>
           </div>
-          <div class="table-container">
-            <table class="data-table" id="table-payroll">
-              <thead>
-                <tr><th><input type="checkbox" id="payroll-check-all" onchange="document.querySelectorAll('.payroll-check').forEach(c=>{c.checked=this.checked; togglePayrollSelect(c.dataset.id)})"></th><th>Nama</th><th>Jabatan</th><th>SPPG</th><th>Gaji Harian</th></tr>
-              </thead>
-              <tbody></tbody>
-            </table>
-          </div>
+          tbody.innerHTML = payrollKaryawan.map(k => `
+    <tr>
+      <td><input type="checkbox" class="payroll-check" data-id="${k.idUser}" onchange="togglePayrollSelect('${k.idUser}')"></td>
+      <td>${escapeHtml(k.namaLengkap)}</td>
+      <td><span class="badge badge-blue">${escapeHtml(k.role||'')}</span></td>
+      <td>${escapeHtml(k.jabatanDivisi)}</td>
+      <td>${escapeHtml(k.sppg)}</td>
+      <td>${formatRupiah(k.gajiHarian)}</td>
+    </tr>
+  `).join('');
         </div>
       </div>
 
@@ -2245,10 +2247,10 @@
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:0.35rem;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
             Slip Gaji Saya
           </div></div>
-          <div class="table-container">
-            <table class="data-table" id="table-my-payroll">
+          <div class="table-container" style="overflow-x:auto;">
+            <table class="data-table" id="table-my-payroll" style="min-width:500px;">
               <thead>
-                <tr><th>Periode</th><th>Hari Kerja</th><th>Total Gaji</th><th>Aksi</th></tr>
+                <tr><th>Periode Mulai</th><th>Periode Akhir</th><th>Hari Kerja</th><th>Gaji Harian</th><th>Total Gaji</th><th>Aksi</th></tr>
               </thead>
               <tbody></tbody>
             </table>
@@ -2274,10 +2276,10 @@
               </button>
             </div>
           </div>
-          <div class="table-container">
-            <table class="data-table" id="table-absensi">
+          <div class="table-container" style="overflow-x:auto;">
+            <table class="data-table" id="table-absensi" style="min-width:800px;">
               <thead>
-                <tr><th>Tanggal</th><th>Nama</th><th>Jabatan</th><th>SPPG</th><th>Jenis</th><th>Waktu</th><th>Skor Wajah</th><th>Status</th></tr>
+                <tr><th>Tanggal</th><th>Nama</th><th>Role</th><th>Jabatan</th><th>SPPG</th><th>Jenis</th><th>Waktu</th><th>Skor Wajah</th><th>Status</th></tr>
               </thead>
               <tbody></tbody>
             </table>
@@ -4168,6 +4170,7 @@ async function initDataKaryawan() {
     tbody.innerHTML = res.karyawan.map(k => `
       <tr>
         <td data-label="Nama">${escapeHtml(k.namaLengkap)}</td>
+        <td data-label="Role"><span class="badge badge-blue">${escapeHtml(k.role||'')}</span></td>
         <td data-label="Jabatan">${escapeHtml(k.jabatanDivisi)}</td>
         <td data-label="JK">${escapeHtml(k.jenisKelamin)}</td>
         <td data-label="Email">${escapeHtml(k.email)}</td>
@@ -4175,6 +4178,7 @@ async function initDataKaryawan() {
         <td data-label="Mulai Kerja">${formatDate(k.tanggalMulaiKerja)}</td>
         <td data-label="SPPG">${escapeHtml(k.sppg)}</td>
         <td data-label="Gaji Harian">${formatRupiah(k.gajiHarian)}</td>
+        <td data-label="Status"><span class="badge ${k.statusAktif ? 'badge-green' : 'badge-red'}">${k.statusAktif ? 'Aktif' : 'Nonaktif'}</span></td>
       </tr>
     `).join('');
   } catch(e) {
@@ -4281,10 +4285,12 @@ async function initMyPayroll() {
     }
     tbody.innerHTML = res.payroll.map(p => `
       <tr>
-        <td data-label="Periode">${formatDate(p.periodeMulai)} - ${formatDate(p.periodeAkhir)}</td>
-        <td data-label="Hari Kerja">${p.jumlahHariKerja}</td>
-        <td data-label="Total Gaji">${formatRupiah(p.totalGaji)}</td>
-        <td data-label="Aksi" class="actions">
+        <td>${formatDate(p.periodeMulai)}</td>
+        <td>${formatDate(p.periodeAkhir)}</td>
+        <td style="text-align:center;">${p.jumlahHariKerja}</td>
+        <td>${formatRupiah(p.gajiHarian||0)}</td>
+        <td style="font-weight:600;">${formatRupiah(p.totalGaji)}</td>
+        <td>
           ${p.urlPdf ? `<a href="${p.urlPdf}" target="_blank" class="btn btn-sm btn-outline">Lihat PDF</a>` : '<span class="text-muted">-</span>'}
         </td>
       </tr>
@@ -4314,14 +4320,15 @@ function renderAbsensiTable(data) {
   }
   tbody.innerHTML = data.map(a => `
     <tr>
-      <td data-label="Tanggal">${formatDate(a.Tanggal)}</td>
-      <td data-label="Nama">${escapeHtml(a.namaLengkap)}</td>
-      <td data-label="Jabatan">${escapeHtml(a.jabatanDivisi)}</td>
-      <td data-label="SPPG">${escapeHtml(a.sppg)}</td>
-      <td data-label="Jenis">${a.Jenis_Absen}</td>
-      <td data-label="Waktu">${a.Waktu_Timestamp ? new Date(a.Waktu_Timestamp).toLocaleTimeString('id-ID') : '-'}</td>
-      <td data-label="Skor Wajah">${a.Skor_Kecocokan_Wajah ? (parseFloat(a.Skor_Kecocokan_Wajah)*100).toFixed(1) + '%' : '-'}</td>
-      <td data-label="Status"><span class="badge ${a.Status_Validasi==='VALID'?'badge-green':'badge-red'}">${a.Status_Validasi}</span></td>
+      <td>${formatDate(a.Tanggal)}</td>
+      <td>${escapeHtml(a.namaLengkap)}</td>
+      <td><span class="badge badge-blue">${escapeHtml(a.role||'')}</span></td>
+      <td>${escapeHtml(a.jabatanDivisi)}</td>
+      <td>${escapeHtml(a.sppg)}</td>
+      <td><span class="badge ${a.Jenis_Absen==='DATANG'?'badge-green':'badge-orange'}">${a.Jenis_Absen}</span></td>
+      <td>${a.Waktu_Timestamp ? new Date(a.Waktu_Timestamp).toLocaleTimeString('id-ID') : '-'}</td>
+      <td style="text-align:center;">${a.Skor_Kecocokan_Wajah ? (parseFloat(a.Skor_Kecocokan_Wajah)*100).toFixed(1) + '%' : '-'}</td>
+      <td><span class="badge ${a.Status_Validasi==='VALID'?'badge-green':'badge-red'}">${a.Status_Validasi}</span></td>
     </tr>
   `).join('');
 }
