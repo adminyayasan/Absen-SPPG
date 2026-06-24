@@ -4802,7 +4802,7 @@ function applyUserUI() {
     return;
   }
   $('#header-nama').textContent = AppState.user.nama || '';
-  $('#header-role').textContent = AppState.user.role || '';
+  $('#header-role').textContent = AppState.user.jabatanDivisi || AppState.user.jabatan || AppState.user.role || '';
   if(AppState.user.fotoProfil) {
     const headerFoto = $('#header-foto');
     if(headerFoto) headerFoto.src = AppState.user.fotoProfil;
