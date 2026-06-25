@@ -4628,39 +4628,6 @@ function renderProfil() {
 
     </div>
   `;
-    <div class="grid grid-2">
-      <div class="card">
-        <div class="card-header"><div class="card-title">${ICONS.profil} Informasi Pribadi</div></div>
-        <div class="form-row form-row-2">
-          <div class="form-group"><label class="form-label">Nama Lengkap</label><input class="form-input" value="${escapeHtml(u.Nama_Lengkap||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">Username</label><input class="form-input" value="${escapeHtml(u.Username||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">ID User</label><input class="form-input" value="${escapeHtml(u.ID_User||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">ID Card</label><input class="form-input" value="${escapeHtml(u.ID_Card_Unik||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">Tempat Lahir</label><input class="form-input" value="${escapeHtml(u.Tempat_Lahir||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">Tanggal Lahir</label><input class="form-input" value="${formatDate(u.Tanggal_Lahir)}" disabled></div>
-          <div class="form-group"><label class="form-label">Jenis Kelamin</label><input class="form-input" value="${escapeHtml(u.Jenis_Kelamin||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">Email</label><input class="form-input" value="${escapeHtml(u.Email||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">No. Whatsapp</label><input class="form-input" value="${escapeHtml(u.No_Whatsapp||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">SPPG</label><input class="form-input" value="${escapeHtml(u.SPPG||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">Jabatan/Divisi</label><input class="form-input" value="${escapeHtml(u.Jabatan_Divisi||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">Gaji Harian</label><input class="form-input" value="${formatRupiah(u.Gaji_Harian)}" disabled></div>
-          <div class="form-group"><label class="form-label">Nama Bank</label><input class="form-input" value="${escapeHtml(u.Nama_Bank||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">Atas Nama Rekening</label><input class="form-input" value="${escapeHtml(u.Atas_Nama_Rekening||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">Tanggal Mulai Kerja</label><input class="form-input" value="${formatDate(u.Tanggal_Mulai_Kerja)}" disabled></div>
-          <div class="form-group"><label class="form-label">Role</label><input class="form-input" value="${escapeHtml(u.Role||'')}" disabled></div>
-          <div class="form-group"><label class="form-label">Status</label><input class="form-input" value="${isActive(u.Status_Aktif)?'Aktif':'Nonaktif'}" disabled></div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">${ICONS.image} ID Card Digital</div></div>
-        <div id="id-card-preview-area" style="margin-bottom:1.25rem;"></div>
-                <a class="btn btn-outline btn-block" id="btn-download-qrpdf" href="${u.Link_PDF_QR ? encodeURI(u.Link_PDF_QR) : '#'}" target="_blank" rel="noopener" style="margin-top:0.625rem; ${!u.Link_PDF_QR ? 'opacity:0.6; pointer-events:none;' : ''}">
-
-          ${ICONS.download} Download QR Code (PDF)
-        </a>
-      </div>
-    </div>
-  `;
   renderIdCardPreview(u);
   // Sembunyikan tombol lama (sudah digantikan action grid di hero card)
   const btnEdit = document.getElementById('btn-edit-profil');
