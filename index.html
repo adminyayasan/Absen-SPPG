@@ -1771,6 +1771,12 @@
       #sidebar-overlay { display: none !important; }
     }
 
+    @media (max-width: 1023px) {
+      .nav-item[data-page="absen-manual"] {
+        display: none !important;
+      }
+    }
+
     .hidden { display: none !important; }
     .text-center { text-align: center; }
     .text-right { text-align: right; }
@@ -2257,6 +2263,10 @@
             <div class="profile-dropdown-item" data-page="profil">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
               Profil
+            </div>
+            <div class="profile-dropdown-item" data-page="my-absensi">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+              My Absensi
             </div>
             <div class="profile-dropdown-item" data-page="my-payroll">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
@@ -2776,6 +2786,35 @@
         </div>
       </div>
 
+      <!-- PAGE: MY ABSENSI -->
+      <div id="page-my-absensi" class="page hidden">
+        <div class="card">
+          <div class="card-header flex flex-between items-center flex-wrap" style="gap:0.75rem;">
+            <div class="card-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:0.35rem;"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+              Riwayat Absensi Saya
+            </div>
+            <div class="flex gap-1 flex-wrap">
+              <input type="month" id="filter-myabs-bulan" class="form-input" style="width:auto;">
+              <button id="btn-filter-myabs" class="btn btn-primary btn-sm">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Filter
+              </button>
+            </div>
+          </div>
+          <!-- Summary cards -->
+          <div id="myabs-summary" class="grid grid-3" style="margin-bottom:1.25rem;"></div>
+          <div class="table-container" style="overflow-x:auto;">
+            <table class="data-table" id="table-my-absensi" style="min-width:520px;">
+              <thead>
+                <tr><th>Tanggal</th><th>Hari</th><th>Datang</th><th>Pulang</th><th>Status</th></tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- PAGE: AUDIT LOG -->
       <div id="page-audit-log" class="page hidden">
         <div class="card">
@@ -3203,6 +3242,7 @@ const Routes = {
   'device-absen': { el: 'page-device-absen', auth: true, roles: null, type: 'device' },
   'audit-log': { el: 'page-audit-log', auth: true, roles: ['ADMIN'] },
   'absen-manual': { el: 'page-absen-manual', auth: true, roles: ['ADMIN','AKUNTAN','USER'] },
+  'my-absensi': { el: 'page-my-absensi', auth: true, roles: ['ADMIN','AKUNTAN','USER'] },
 };
 
 function navigateTo(page) {
@@ -3236,18 +3276,19 @@ function navigateTo(page) {
     bottomBtn.classList.toggle('active', page === 'absen-manual');
   }
 
-  // Sembunyikan bottom bar di halaman login/register/device
-  const bottomBar = document.getElementById('mobile-bottom-bar');
-  if(bottomBar) {
-    const hideOnPages = ['login', 'register', 'device-absen'];
-    bottomBar.style.display = hideOnPages.includes(page) ? 'none' : '';
-  }
+  // Sembunyikan bottom bar di halaman login/register/device/absen-manual
+      const bottomBar = document.getElementById('mobile-bottom-bar');
+      if(bottomBar) {
+        const hideOnPages = ['login', 'register', 'device-absen', 'absen-manual'];
+        bottomBar.style.display = hideOnPages.includes(page) ? 'none' : '';
+      }
   const titles = {
-    'login': 'Login', 'register': 'Register', 'dashboard': 'Dashboard',
-    'profil': 'Profil', 'manajemen-user': 'Manajemen User', 'data-karyawan': 'Data Karyawan',
-    'payroll': 'Payroll', 'my-payroll': 'My Payroll', 'absensi': 'Data Absensi',
-    'device-absen': 'Absensi', 'audit-log': 'Catatan Aktivitas', 'absen-manual': 'Absen'
-  };
+      'login': 'Login', 'register': 'Register', 'dashboard': 'Dashboard',
+      'profil': 'Profil', 'manajemen-user': 'Manajemen User', 'data-karyawan': 'Data Karyawan',
+      'payroll': 'Payroll', 'my-payroll': 'My Payroll', 'absensi': 'Data Absensi',
+      'device-absen': 'Absensi', 'audit-log': 'Catatan Aktivitas', 'absen-manual': 'Absen',
+      'my-absensi': 'Absensi Saya'
+    };
   $('#page-title').textContent = titles[page] || '';
   $('#sidebar').classList.remove('open');
   $('#sidebar-overlay').classList.remove('show');
@@ -3264,6 +3305,7 @@ function navigateTo(page) {
     clearInterval(window._clockInterval);
     window._clockInterval = null;
   }
+  if(page === 'my-absensi') initMyAbsensi();
   if(page === 'audit-log') initAuditLog();
   if(page === 'absen-manual') initAbsenManual();
   if(page === 'register') initRegister();
@@ -5505,11 +5547,84 @@ async function filterAuditLog() {
   } catch(e) { showAlert(e); }
 }
 
+// ==================== MY ABSENSI ====================
+async function initMyAbsensi() {
+  const tbody = $('#table-my-absensi tbody');
+  const summaryEl = $('#myabs-summary');
+  renderTableSkeleton(tbody, 5, 6);
+  if(summaryEl) summaryEl.innerHTML = '';
+
+  // Default filter: bulan berjalan
+  const now = new Date();
+  const bulanInput = $('#filter-myabs-bulan');
+  if(bulanInput && !bulanInput.value) {
+    bulanInput.value = now.getFullYear() + '-' + String(now.getMonth()+1).padStart(2,'0');
+  }
+
+  const filterBulan = bulanInput ? bulanInput.value : '';
+
+  try {
+    const res = await apiCallWithToken('getMyAbsensi', { filterBulan });
+    renderMyAbsensiPage(res);
+  } catch(e) {
+    renderTableErrorState(tbody, 5, e, initMyAbsensi);
+  }
+}
+
+function renderMyAbsensiPage(res) {
+  const tbody = $('#table-my-absensi tbody');
+  const summaryEl = $('#myabs-summary');
+
+  // Summary cards
+  if(summaryEl) {
+    summaryEl.innerHTML = `
+      <div class="card stat-card">
+        <div class="stat-icon green" style="font-size:1.4rem;">✅</div>
+        <div><div class="stat-value">${res.totalHariKerja}</div><div class="stat-label">Hari Kerja</div></div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-icon blue" style="font-size:1.4rem;">🕗</div>
+        <div><div class="stat-value">${res.totalDatang}</div><div class="stat-label">Absen Datang</div></div>
+      </div>
+      <div class="card stat-card">
+        <div class="stat-icon orange" style="font-size:1.4rem;">🚪</div>
+        <div><div class="stat-value">${res.totalPulang}</div><div class="stat-label">Absen Pulang</div></div>
+      </div>
+    `;
+  }
+
+  if(!res.rows || res.rows.length === 0) {
+    renderTableEmptyState(tbody, 5, '📋', 'Belum ada data absensi', 'Tidak ada absensi pada bulan yang dipilih.');
+    return;
+  }
+
+  const dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  tbody.innerHTML = res.rows.map(r => {
+    const d = new Date(r.tanggal);
+    const isSunday = d.getDay() === 0;
+    const isSaturday = d.getDay() === 6;
+    const rowStyle = isSunday ? 'background:#fff1f2;' : isSaturday ? 'background:#fffbeb;' : '';
+    const statusBadge = r.lengkap
+      ? '<span class="badge badge-green">Lengkap</span>'
+      : r.datang
+        ? '<span class="badge badge-orange">Belum Pulang</span>'
+        : '<span class="badge badge-red">Tidak Hadir</span>';
+    return `<tr style="${rowStyle}">
+      <td data-label="Tanggal" style="font-weight:500;">${escapeHtml(r.tanggal)}</td>
+      <td data-label="Hari">${dayNames[d.getDay()]}</td>
+      <td data-label="Datang">${r.datang ? `<span style="color:var(--success); font-weight:600;">${escapeHtml(r.datang)}</span>` : '<span class="text-muted">—</span>'}</td>
+      <td data-label="Pulang">${r.pulang ? `<span style="color:var(--primary); font-weight:600;">${escapeHtml(r.pulang)}</span>` : '<span class="text-muted">—</span>'}</td>
+      <td data-label="Status">${statusBadge}</td>
+    </tr>`;
+  }).join('');
+}
+
 // ==================== GLOBAL EVENTS ====================
 document.addEventListener('click', e => {
   if(e.target.matches('#btn-save-user-detail')) saveUserDetail();
   if(e.target.matches('#btn-filter-absensi')) filterAbsensi();
   if(e.target.matches('#btn-filter-audit')) filterAuditLog();
+  if(e.target.matches('#btn-filter-myabs')) initMyAbsensi();
 });
 </script>
 </body>
