@@ -4296,7 +4296,7 @@ async function startWajahCapture(videoId, canvasId, statusId) {
     const guide = camContainer ? camContainer.querySelector('.face-guide') : null;
     const statusEl = $(`#${statusId}`);
 
-    ffunction isFaceCenteredW(det,vW,vH) {
+    function isFaceCenteredW(det,vW,vH) {
       const b=det.detection.box,cx=b.x+b.width/2,cy=b.y+b.height/2;
       return Math.abs(cx-vW/2)<vW*0.25&&Math.abs(cy-vH/2)<vH*0.25&&b.width>vW*0.18&&b.width<vW*0.88;
     }
