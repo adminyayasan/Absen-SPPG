@@ -6148,7 +6148,7 @@ async function startAbsenFaceScan() {
       return Math.abs(cx-vW/2)<vW*0.28&&Math.abs(cy-vH/2)<vH*0.28&&b.width>vW*0.16&&b.width<vW*0.90;
     }
 
-    const SMILE_THR_A = 0.70;
+    const SMILE_THR_A = 0.80;
     let aPhase='center', attempts=0, done=false;
 
     const interval = setInterval(async () => {
