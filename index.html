@@ -2113,9 +2113,44 @@
         justify-content: center;
       }
 
-      /* ===== Login & Register: padding kartu lebih ringkas ===== */
-      .auth-card { padding: 1.5rem 1.25rem; }
-      .auth-logo { font-size: 1.4rem; }
+      /* ===== KUNCI SCROLL HORIZONTAL HALAMAN (KHUSUS MOBILE) =====
+       Mencegah seluruh halaman bisa digeser ke kanan (yang membuat
+       top bar ikut "hilang" karena sticky hanya mengunci vertikal).
+       Tabel & area yang memang butuh geser (table-scroll-mobile,
+       crop modal) tetap punya scroll sendiri di dalamnya. */
+    @media (max-width: 639px) {
+      html, body {
+        overflow-x: hidden;
+        width: 100%;
+        max-width: 100vw;
+      }
+      #app-layout {
+        max-width: 100vw;
+        overflow-x: hidden;
+      }
+      #main-content {
+        max-width: 100vw;
+        overflow-x: hidden;
+      }
+      #content-area {
+        max-width: 100%;
+        overflow-x: hidden;
+      }
+      /* Pastikan kartu & elemen umum tidak melebihi lebar layar */
+      .card, .modal, .auth-card {
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      /* Modal: cegah konten di dalamnya (mis. crop foto 300px) bocor ke luar layar */
+      .modal-overlay { padding: 0.5rem; }
+      .modal { overflow-x: hidden; }
+      .crop-wrapper { overflow-x: hidden; max-width: 100%; }
+      .crop-stage { width: 280px; height: 280px; max-width: 80vw; }
+
+      /* Teks jam besar di halaman Absen/Device Absen: jangan sampai melebar */
+      .device-time { font-size: 2.5rem; max-width: 100%; overflow-wrap: anywhere; }
+      .device-ui { padding-left: 1.25rem; padding-right: 1.25rem; }
+      .absen-mode-grid, .camera-container, .id-card-preview { max-width: 100%; }
     }
 
     @media (max-width: 1023px) {
