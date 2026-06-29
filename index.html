@@ -8507,12 +8507,31 @@ async function startAbsenSelfFaceScan() {
           break;
         case 'done':
           if(guide) guide.className='face-guide liveness-ok';
-          if(statusBox){statusBox.className='liveness-status-box ok';statusBox.textContent='✅ Liveness OK — Mencocokkan...';}
           updateScanSteps('absen-self-scan-steps', 'absen-self-hint-box', 'matched', '✅ Liveness OK — Mencocokkan wajah...');
           if(absenFaceDescriptor){
             const skor=(1-faceapi.euclideanDistance(det.descriptor,new Float32Array(absenFaceDescriptor)))*100;
-            if(statusEl) statusEl.textContent=`Skor kecocokan: ${skor.toFixed(1)}%`;
-            if(skor>FACE_MATCH_THRESHOLD){
+            const skorPct = skor.toFixed(1);
+            // Warna indikator berdasarkan skor
+            const skorWarna = skor >= FACE_MATCH_THRESHOLD ? '#34d399'
+              : skor >= FACE_MATCH_THRESHOLD * 0.75 ? '#fbbf24'
+              : '#f87171';
+            if(statusBox){
+              statusBox.className = 'liveness-status-box' + (skor >= FACE_MATCH_THRESHOLD ? ' ok' : '');
+              statusBox.textContent = `Mencocokkan wajah... ${skorPct}%`;
+            }
+            if(statusEl) statusEl.textContent = `Skor kecocokan: ${skorPct}% (min. ${FACE_MATCH_THRESHOLD}%)`;
+            // Update hint box dengan progress kecocokan
+            const hintEl = document.getElementById('absen-self-hint-box');
+            if(hintEl) {
+              const barFill = Math.min(100, Math.round(skor));
+              hintEl.innerHTML = `
+                <div style="margin-bottom:4px;">Kecocokan wajah: <strong style="color:${skorWarna};">${skorPct}%</strong> <span style="color:var(--text-muted); font-size:0.75em;">(min. ${FACE_MATCH_THRESHOLD}%)</span></div>
+                <div style="background:rgba(0,0,0,0.08); height:6px; border-radius:3px; overflow:hidden;">
+                  <div style="height:100%; width:${barFill}%; background:${skorWarna}; border-radius:3px; transition:width 0.3s ease;"></div>
+                </div>
+              `;
+            }
+            if(skor > FACE_MATCH_THRESHOLD){
               done=true;clearInterval(interval);stopVideo();
               try {
                 const res2=await apiCallWithToken('recordAbsensiSelf',{idUser:absenIdUser,skorKecocokan:skor/100,statusValidasi:'VALID',lat:absenLat,lng:absenLng});
@@ -8524,9 +8543,15 @@ async function startAbsenSelfFaceScan() {
               } catch(eAbsen) {
                 showAbsenSelfResult(false, getErrorMessage(eAbsen));
               }
-            } else if(attempts>160){
+            } else if(attempts > 160){
               done=true;clearInterval(interval);stopVideo();
-              showAbsenSelfResult(false,'Wajah tidak cocok dengan data Anda. Silakan coba lagi.');
+              // Pesan detail: skor terakhir + panduan
+              const pesanGagal = skor < 20
+                ? `Wajah tidak dikenali (skor: ${skorPct}%). Pastikan pencahayaan cukup, wajah menghadap kamera, dan Anda sudah mendaftarkan data wajah di menu Profil.`
+                : skor < FACE_MATCH_THRESHOLD * 0.75
+                ? `Wajah kurang cocok (skor: ${skorPct}%). Coba perbaiki pencahayaan, lepas kacamata, atau perbarui data wajah di menu Profil.`
+                : `Skor kecocokan belum cukup (${skorPct}% dari min. ${FACE_MATCH_THRESHOLD}%). Coba lagi dengan pencahayaan lebih baik atau perbarui data wajah di Profil.`;
+              showAbsenSelfResult(false, pesanGagal, skor);
             }
           }
           break;
@@ -8538,13 +8563,61 @@ async function startAbsenSelfFaceScan() {
   }
 }
 
-function showAbsenSelfResult(success, message) {
+function showAbsenSelfResult(success, message, skorTerakhir) {
   $('#absen-step-face-self').classList.add('hidden');
   $('#absen-step-result').classList.remove('hidden');
-  $('#absen-result-icon').textContent = success ? '✅' : '❌';
-  $('#absen-result-text').textContent = success ? message : ('⚠️ ' + message);
-  $('#absen-result-text').className = success ? 'text-success' : 'text-danger';
-  setTimeout(resetAbsenFlow, 5000);
+
+  const iconEl = $('#absen-result-icon');
+  const textEl = $('#absen-result-text');
+
+  iconEl.textContent = success ? '✅' : '❌';
+  textEl.className = success ? 'text-success' : 'text-danger';
+
+  if(success) {
+    textEl.textContent = message;
+    setTimeout(resetAbsenFlow, 5000);
+  } else {
+    // Tampilkan pesan utama + detail skor (jika ada) + tombol coba lagi
+    const skorHtml = (skorTerakhir !== undefined && skorTerakhir !== null)
+      ? `<div style="margin-top:0.75rem; background:var(--danger-light); border:1px solid #fca5a5; border-radius:var(--radius); padding:0.625rem 0.875rem; font-size:0.8125rem; color:#991b1b;">
+           <div style="font-weight:700; margin-bottom:0.25rem;">Detail Kecocokan Wajah</div>
+           <div>Skor terakhir: <strong>${parseFloat(skorTerakhir).toFixed(1)}%</strong> (dibutuhkan min. <strong>${FACE_MATCH_THRESHOLD}%</strong>)</div>
+           <div style="background:rgba(0,0,0,0.08); height:6px; border-radius:3px; margin-top:6px; overflow:hidden;">
+             <div style="height:100%; width:${Math.min(100,Math.round(parseFloat(skorTerakhir)))}%; background:#ef4444; border-radius:3px;"></div>
+           </div>
+         </div>`
+      : '';
+
+    textEl.innerHTML = `<span>⚠️ ${escapeHtml(message)}</span>${skorHtml}`;
+
+    // Tombol coba ulang — tidak perlu tunggu 5 detik
+    const btnOk = document.getElementById('btn-absen-result-ok');
+    if(btnOk) {
+      // Ganti teks tombol menjadi "Coba Lagi" saat gagal
+      const origHtml = btnOk.innerHTML;
+      btnOk.innerHTML = `
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.41"/></svg>
+        Coba Lagi
+      `;
+      // Reset teks tombol setelah flow di-reset
+      const origClickHandler = resetAbsenFlow;
+      btnOk.onclick = () => {
+        btnOk.innerHTML = origHtml;
+        btnOk.onclick = null;
+        resetAbsenFlow();
+      };
+    }
+
+    // Auto-reset setelah 12 detik (lebih lama dari sukses agar user sempat baca)
+    setTimeout(() => {
+      const btnOk2 = document.getElementById('btn-absen-result-ok');
+      if(btnOk2 && btnOk2.onclick) {
+        btnOk2.innerHTML = `OK`;
+        btnOk2.onclick = null;
+      }
+      resetAbsenFlow();
+    }, 12000);
+  }
 }
 
 async function startAbsenFlow() {
