@@ -829,7 +829,7 @@
       inset: 0; 
       background: rgba(15, 23, 42, 0.6);
       backdrop-filter: blur(8px);
-      z-index: 200; 
+      z-index: 1100; 
       align-items: center; 
       justify-content: center; 
       padding: 1rem;
@@ -2836,6 +2836,13 @@
     }
 
     @media (max-width: 1023px) {
+      .modal-overlay {
+        align-items: flex-end;
+        padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+      }
+      .modal-overlay .modal {
+        max-height: calc(90vh - 72px - env(safe-area-inset-bottom, 0px));
+      }
       #mobile-bottom-bar {
         display: flex;
         position: fixed;
@@ -5299,6 +5306,26 @@
           <div id="inbox-pengaduan-list" class="pengaduan-list"></div>
         </div>
       </div>
+
+<!-- MODAL: DETAIL PENGADUAN SAYA (USER, read-only) -->
+      <div id="modal-pengaduan-saya-detail" class="modal-overlay">
+        <div class="modal modal-lg">
+          <div class="modal-header">
+            <div class="modal-title">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle; margin-right:0.35rem;"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Detail Pengaduan Saya
+            </div>
+            <button class="modal-close modal-cancel">&times;</button>
+          </div>
+          <div class="modal-body" id="modal-pengaduan-saya-detail-body"></div>
+          <div class="modal-footer">
+            <button class="btn btn-outline modal-cancel">Tutup</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: DETAIL PENGADUAN (ADMIN) -->
+      <div id="modal-pengaduan-detail" class="modal-overlay">
 
       <!-- MODAL: DETAIL PENGADUAN (ADMIN) -->
       <div id="modal-pengaduan-detail" class="modal-overlay">
@@ -9711,9 +9738,60 @@ function renderMyAbsensiPage(res) {
 // State modul pengaduan
 const PengaduanState = {
   allInbox: [],          // cache inbox admin
+  riwayatSaya: [],       // cache riwayat pengaduan milik user yang login
   selectedId: null,      // ID pengaduan yang sedang dibuka di modal
   notifInterval: null    // interval polling badge notifikasi
 };
+
+// ==================== DETAIL PENGADUAN SAYA (USER, read-only) ====================
+function showDetailPengaduanSaya(idx) {
+  const p = PengaduanState.riwayatSaya[idx];
+  if(!p) return;
+
+  const isSudah = p.Status_Baca === 'Sudah Dibaca';
+  const badgeClass = PENGADUAN_KATEGORI_COLOR[p.Kategori] || 'badge-gray';
+
+  const tanggapanHtml = p.Tanggapan_Admin
+    ? `<div class="pengaduan-tanggapan-wrap">
+         <div class="pengaduan-detail-label">💬 Tanggapan Admin</div>
+         <div class="pengaduan-detail-value">${escapeHtml(p.Tanggapan_Admin)}</div>
+       </div>`
+    : `<div class="pengaduan-detail-section" style="text-align:center; color:var(--text-muted); font-size:0.8125rem;">
+         Belum ada tanggapan dari Admin.
+       </div>`;
+
+  document.getElementById('modal-pengaduan-saya-detail-body').innerHTML = `
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem; margin-bottom:1rem;">
+      <div class="pengaduan-detail-section" style="margin-bottom:0;">
+        <div class="pengaduan-detail-label">ID Pengaduan</div>
+        <div class="pengaduan-detail-value" style="font-family:'Courier New',monospace; font-size:0.8rem; color:var(--primary);">${escapeHtml(p.ID_Pengaduan)}</div>
+      </div>
+      <div class="pengaduan-detail-section" style="margin-bottom:0;">
+        <div class="pengaduan-detail-label">Waktu Kirim</div>
+        <div class="pengaduan-detail-value">${formatDateTime(p.Timestamp)}</div>
+      </div>
+      <div class="pengaduan-detail-section" style="margin-bottom:0;">
+        <div class="pengaduan-detail-label">Kategori</div>
+        <div class="pengaduan-detail-value">
+          <span class="badge ${badgeClass}">${escapeHtml(p.Kategori)}</span>
+        </div>
+      </div>
+      <div class="pengaduan-detail-section" style="margin-bottom:0;">
+        <div class="pengaduan-detail-label">Status</div>
+        <span class="badge ${isSudah ? 'badge-green' : 'badge-blue'}">${escapeHtml(p.Status_Baca)}</span>
+      </div>
+    </div>
+
+    <div class="pengaduan-detail-section">
+      <div class="pengaduan-detail-label">Isi Pengaduan</div>
+      <div class="pengaduan-detail-value">${escapeHtml(p.Isi_Pengaduan)}</div>
+    </div>
+
+    ${tanggapanHtml}
+  `;
+
+  document.getElementById('modal-pengaduan-saya-detail').classList.add('show');
+}
 
 // Daftar kategori lengkap (dipakai untuk render chip & badge warna)
 const PENGADUAN_KATEGORI_COLOR = {
@@ -9827,7 +9905,9 @@ async function loadRiwayatPengaduan() {
       return;
     }
 
-    container.innerHTML = list.map(p => {
+    PengaduanState.riwayatSaya = list;
+
+    container.innerHTML = list.map((p, idx) => {
       const isSudah = p.Status_Baca === 'Sudah Dibaca';
       const iconClass = isSudah ? 'sudah' : 'belum';
       const iconEmoji = isSudah ? '✅' : '🕐';
@@ -9838,7 +9918,7 @@ async function loadRiwayatPengaduan() {
            </div>`
         : '';
       return `
-        <div class="pengaduan-riwayat-item">
+        <div class="pengaduan-riwayat-item" style="cursor:pointer;" onclick="showDetailPengaduanSaya(${idx})">
           <div class="pengaduan-riwayat-icon ${iconClass}">${iconEmoji}</div>
           <div class="pengaduan-riwayat-body">
             <div class="pengaduan-riwayat-kat">${escapeHtml(p.Kategori)} &bull; <span class="badge ${badgeClass}" style="font-size:0.65rem; padding:0.15rem 0.5rem;">${escapeHtml(p.Status_Baca)}</span></div>
@@ -10074,13 +10154,21 @@ async function doSimpanTanggapan(idPengaduan) {
   const btn = document.getElementById('btn-simpan-tanggapan');
   setButtonLoading(btn, true, 'Menyimpan...');
   try {
-    await apiCallWithToken('simpanTanggapanAdmin', { idPengaduan, tanggapan });
-    showAlert('Tanggapan berhasil disimpan.', 'success');
-    // Update cache
+    const res = await apiCallWithToken('simpanTanggapanAdmin', { idPengaduan, tanggapan });
+    showAlert('Tanggapan berhasil disimpan' + (res.otomatisTandaiDibaca ? ' dan ditandai sudah dibaca.' : '.'), 'success');
+    // Update cache: tanggapan + status baca (backend otomatis menandai sudah dibaca)
     const idx = PengaduanState.allInbox.findIndex(p => p.ID_Pengaduan === idPengaduan);
-    if(idx >= 0) PengaduanState.allInbox[idx].Tanggapan_Admin = tanggapan;
+    if(idx >= 0) {
+      PengaduanState.allInbox[idx].Tanggapan_Admin = tanggapan;
+      if(res.otomatisTandaiDibaca) {
+        PengaduanState.allInbox[idx].Status_Baca = 'Sudah Dibaca';
+        PengaduanState.allInbox[idx].Ditandai_Oleh = AppState.user?.idUser || '-';
+        PengaduanState.allInbox[idx].Waktu_Dibaca = new Date().toISOString();
+      }
+    }
     document.getElementById('modal-pengaduan-detail').classList.remove('show');
     _renderInboxList(PengaduanState.allInbox);
+    _updateInboxUnreadBadge(PengaduanState.allInbox);
   } catch(e) {
     showAlert('Gagal menyimpan tanggapan: ' + e, 'danger');
   } finally {
