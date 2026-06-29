@@ -5816,14 +5816,15 @@ let cropState = {
 // ==================== API WRAPPER ====================
 const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyr3IvTL1DK3WhNM2qbDoq1HBXb4BCdUu7HaBr0bsBGL4KgBANdf840dWRNzTMl3nGB/exec';
 
-// ==================== PERSIST CACHE KE LOCALSTORAGE ====================
-// _apiCache normalnya hanya hidup di RAM (hilang saat reload/F5).
+// ==================== INISIALISASI CACHE (harus sebelum apiCall) ====================
+let _apiCache = {};
 // Dengan persist ke localStorage, saat halaman dibuka ulang kita bisa
 // langsung render data lama (stale-while-revalidate) sebelum fetch baru
 // selesai, sehingga reload terasa instan meski data tetap di-refresh
 // di background.
 const _APICACHE_STORAGE_KEY = 'absensi_apicache_v1';
 const _APICACHE_MAX_AGE_RESTORE = 10 * 60 * 1000; // jangan restore entry lebih tua dari 10 menit
+// Catatan: _apiCache sudah dideklarasikan di atas dan akan diisi oleh initApiCache() setelah _loadApiCacheFromStorage() didefinisikan
 
 function _loadApiCacheFromStorage() {
   try {
@@ -5845,6 +5846,17 @@ function _loadApiCacheFromStorage() {
   }
 }
 
+// Muat cache dari storage saat pertama kali script berjalan
+(function initApiCache() {
+  try {
+    const restored = _loadApiCacheFromStorage();
+    Object.assign(_apiCache, restored);
+    console.log('[CACHE] Cache berhasil dimuat:', Object.keys(restored).length, 'entri');
+  } catch(e) {
+    console.warn('[CACHE] Gagal restore cache awal:', e);
+  }
+})();
+// _apiCache sudah dideklarasikan di bagian atas — JANGAN deklarasikan ulang di sini
 let _apiCacheSaveTimer = null;
 function _persistApiCacheToStorage() {
   // Debounce agar tidak menulis ke localStorage terlalu sering saat banyak
@@ -6304,8 +6316,10 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // Mobile bottom bar - semua tombol navigasi
+  // Gunakan closure untuk menghindari referensi fungsi sebelum didefinisikan
   document.querySelectorAll('#mobile-bottom-bar .bottom-bar-btn[data-nav]').forEach(btn => {
     btn.addEventListener('click', () => {
+      if(typeof navigateTo !== 'function') { console.error('navigateTo belum tersedia'); return; }
       if(!AppState.token) { navigateTo('login'); return; }
       navigateTo(btn.dataset.nav);
     });
