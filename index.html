@@ -2360,6 +2360,304 @@
       color: var(--text-muted);
     }
 
+    /* ==================== ADMIN DASHBOARD MODERN ==================== */
+    .dash-admin-hero {
+      background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 55%, #1d4ed8 100%);
+      border-radius: var(--radius-xl);
+      padding: 1.75rem 1.75rem 1.5rem;
+      color: white;
+      position: relative;
+      overflow: hidden;
+      margin-bottom: 1.25rem;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .dash-admin-hero::before {
+      content: '';
+      position: absolute;
+      width: 280px; height: 280px;
+      background: radial-gradient(circle, rgba(255,255,255,0.08) 0%, transparent 70%);
+      top: -100px; right: -60px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .dash-admin-hero::after {
+      content: '';
+      position: absolute;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(96,165,250,0.18) 0%, transparent 70%);
+      bottom: -80px; left: -40px;
+      border-radius: 50%;
+      pointer-events: none;
+    }
+
+    .dash-admin-hero-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      position: relative;
+      z-index: 1;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+
+    .dash-admin-hero-greeting {
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .dash-admin-hero-sub {
+      font-size: 0.8125rem;
+      color: rgba(255,255,255,0.65);
+      margin-top: 0.2rem;
+    }
+
+    .dash-admin-hero-date {
+      background: rgba(255,255,255,0.12);
+      border: 1px solid rgba(255,255,255,0.15);
+      padding: 0.35rem 0.875rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .dash-admin-hero-stats {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    @media (max-width: 639px) {
+      .dash-admin-hero-stats { grid-template-columns: repeat(2, 1fr); }
+      .dash-admin-hero { padding: 1.5rem 1.25rem 1.25rem; }
+    }
+
+    .dash-admin-hero-stat {
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: var(--radius-lg);
+      padding: 0.875rem 1rem;
+      backdrop-filter: blur(4px);
+      transition: var(--transition);
+    }
+
+    .dash-admin-hero-stat:hover {
+      background: rgba(255,255,255,0.13);
+      transform: translateY(-2px);
+    }
+
+    .dash-admin-hero-stat-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+
+    .dash-admin-hero-stat-icon {
+      width: 30px; height: 30px;
+      border-radius: 9px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.95rem;
+      flex-shrink: 0;
+    }
+
+    .dash-admin-hero-stat-value {
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+
+    .dash-admin-hero-stat-label {
+      font-size: 0.7rem;
+      color: rgba(255,255,255,0.6);
+      font-weight: 500;
+      margin-top: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .dash-section-title {
+      font-size: 0.9375rem;
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .dash-section-title .dash-section-icon {
+      width: 30px; height: 30px;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .dash-chart-wrap {
+      display: flex;
+      align-items: flex-end;
+      gap: 0.625rem;
+      height: 150px;
+      padding: 0.5rem 0.25rem 0;
+    }
+
+    .dash-chart-col {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.5rem;
+      height: 100%;
+      justify-content: flex-end;
+    }
+
+    .dash-chart-bars {
+      display: flex;
+      align-items: flex-end;
+      gap: 3px;
+      height: 100%;
+      width: 100%;
+      justify-content: center;
+    }
+
+    .dash-chart-bar {
+      width: 9px;
+      border-radius: 4px 4px 2px 2px;
+      min-height: 3px;
+      transition: height 0.5s cubic-bezier(0.4,0,0.2,1);
+      position: relative;
+    }
+
+    .dash-chart-bar.datang { background: linear-gradient(180deg, #34d399 0%, #059669 100%); }
+    .dash-chart-bar.pulang { background: linear-gradient(180deg, #fbbf24 0%, #d97706 100%); }
+
+    .dash-chart-label {
+      font-size: 0.625rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .dash-chart-legend {
+      display: flex;
+      gap: 1.25rem;
+      justify-content: center;
+      margin-top: 0.875rem;
+      padding-top: 0.875rem;
+      border-top: 1px solid var(--border-light);
+    }
+
+    .dash-chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .dash-chart-legend-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dash-belum-item {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.625rem 0.25rem;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .dash-belum-item:last-child { border-bottom: none; }
+
+    .dash-belum-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #fca5a5 0%, #ef4444 100%);
+      color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .dash-belum-name {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text);
+      line-height: 1.3;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .dash-belum-meta {
+      font-size: 0.6875rem;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
+
+    .dash-belum-empty {
+      text-align: center;
+      padding: 1.5rem 0;
+      color: var(--success);
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .dash-dist-row {
+      padding: 0.625rem 0.25rem;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .dash-dist-row:last-child { border-bottom: none; }
+
+    .dash-dist-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 0.375rem;
+    }
+
+    .dash-dist-name {
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .dash-dist-value {
+      font-size: 0.8125rem;
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .dash-dist-bar-track {
+      background: #f1f5f9;
+      height: 7px;
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .dash-dist-bar-fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #60a5fa 0%, #2563eb 100%);
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    .dash-dist-bar-fill.alt {
+      background: linear-gradient(90deg, #a78bfa 0%, #7c3aed 100%);
+    }
+
     /* ==================== TOAST UNDO ==================== */
     .alert-undo-btn {
       background: rgba(0,0,0,0.08);
@@ -5467,125 +5765,135 @@ function renderDashboardAdmin(data) {
   container.classList.remove('hidden');
   $('#dashboard-user').classList.add('hidden');
 
-  const mobile = isMobileView();
+  const namaUser = (AppState.user && AppState.user.nama) || (AppState.user && AppState.user.role) || 'Admin';
+  const todayLong = new Date().toLocaleDateString('id-ID', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
 
-  const statCardsHtml = `
-    <div class="grid grid-4 mb-2">
-      <div class="card stat-card">
-        <div class="stat-icon blue">${ICONS.karyawan}</div>
-        <div><div class="stat-value">${data.totalKaryawan}</div><div class="stat-label">Karyawan Aktif</div></div>
+  // ===== HERO BANNER =====
+  const heroHtml = `
+    <div class="dash-admin-hero">
+      <div class="dash-admin-hero-top">
+        <div>
+          <div class="dash-admin-hero-greeting">Halo, ${escapeHtml(namaUser)} 👋</div>
+          <div class="dash-admin-hero-sub">Ringkasan operasional hari ini</div>
+        </div>
+        <div class="dash-admin-hero-date">${todayLong}</div>
       </div>
-      <div class="card stat-card">
-        <div class="stat-icon green">${ICONS.absensi}</div>
-        <div><div class="stat-value">${data.datangHariIni}</div><div class="stat-label">Absen Datang Hari Ini</div></div>
-      </div>
-      <div class="card stat-card">
-        <div class="stat-icon orange">${ICONS.absen}</div>
-        <div><div class="stat-value">${data.pulangHariIni}</div><div class="stat-label">Absen Pulang Hari Ini</div></div>
-      </div>
-      <div class="card stat-card">
-        <div class="stat-icon blue">${ICONS.payroll}</div>
-        <div><div class="stat-value">${data.payrollBulanIni}</div><div class="stat-label">Payroll Bulan Ini</div></div>
+      <div class="dash-admin-hero-stats">
+        <div class="dash-admin-hero-stat">
+          <div class="dash-admin-hero-stat-top">
+            <div class="dash-admin-hero-stat-icon" style="background:rgba(96,165,250,0.25); color:#bfdbfe;">${ICONS.karyawan}</div>
+          </div>
+          <div class="dash-admin-hero-stat-value">${data.totalKaryawan}</div>
+          <div class="dash-admin-hero-stat-label">Karyawan Aktif</div>
+        </div>
+        <div class="dash-admin-hero-stat">
+          <div class="dash-admin-hero-stat-top">
+            <div class="dash-admin-hero-stat-icon" style="background:rgba(52,211,153,0.25); color:#a7f3d0;">${ICONS.absensi}</div>
+          </div>
+          <div class="dash-admin-hero-stat-value">${data.datangHariIni}</div>
+          <div class="dash-admin-hero-stat-label">Datang Hari Ini</div>
+        </div>
+        <div class="dash-admin-hero-stat">
+          <div class="dash-admin-hero-stat-top">
+            <div class="dash-admin-hero-stat-icon" style="background:rgba(251,191,36,0.25); color:#fde68a;">${ICONS.absen}</div>
+          </div>
+          <div class="dash-admin-hero-stat-value">${data.pulangHariIni}</div>
+          <div class="dash-admin-hero-stat-label">Pulang Hari Ini</div>
+        </div>
+        <div class="dash-admin-hero-stat">
+          <div class="dash-admin-hero-stat-top">
+            <div class="dash-admin-hero-stat-icon" style="background:rgba(167,139,250,0.25); color:#ddd6fe;">${ICONS.payroll}</div>
+          </div>
+          <div class="dash-admin-hero-stat-value">${data.payrollBulanIni}</div>
+          <div class="dash-admin-hero-stat-label">Payroll Bulan Ini</div>
+        </div>
       </div>
     </div>
   `;
 
-  // ===== TREND ABSENSI =====
-  let trendHtml;
-  if(mobile) {
-    const rows = data.trend7Hari.map(t => `
-      <div style="display:flex; align-items:center; justify-content:space-between; padding:0.5rem 0; border-bottom:1px solid var(--border-light);">
-        <div style="font-size:0.8125rem; color:var(--text-secondary); font-weight:500;">${formatDate(t.tanggal)}</div>
-        <div style="display:flex; gap:0.875rem;">
-          <span style="font-size:0.8125rem;"><span style="color:var(--success); font-weight:700;">${t.datang}</span> <span style="color:var(--text-muted);">datang</span></span>
-          <span style="font-size:0.8125rem;"><span style="color:var(--warning); font-weight:700;">${t.pulang}</span> <span style="color:var(--text-muted);">pulang</span></span>
+  // ===== TREND ABSENSI (mini bar chart) =====
+  const maxTrendVal = Math.max(1, ...data.trend7Hari.map(t => Math.max(t.datang, t.pulang)));
+  const dayShort = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+  const chartCols = data.trend7Hari.map(t => {
+    const d = new Date(t.tanggal);
+    const hDatang = Math.max(3, Math.round((t.datang / maxTrendVal) * 110));
+    const hPulang = Math.max(3, Math.round((t.pulang / maxTrendVal) * 110));
+    return `
+      <div class="dash-chart-col" title="${escapeHtml(formatDate(t.tanggal))}: ${t.datang} datang, ${t.pulang} pulang">
+        <div class="dash-chart-bars">
+          <div class="dash-chart-bar datang" style="height:${hDatang}px;"></div>
+          <div class="dash-chart-bar pulang" style="height:${hPulang}px;"></div>
         </div>
-      </div>`).join('');
-    trendHtml = `
-      <div class="card">
-        <div class="card-header"><div class="card-title">Trend Absensi 7 Hari Terakhir</div></div>
-        <div>${rows || '<div class="text-muted" style="text-align:center; padding:1rem 0; font-size:0.8125rem;">Belum ada data</div>'}</div>
+        <div class="dash-chart-label">${dayShort[d.getDay()]}</div>
       </div>`;
-  } else {
-    trendHtml = `
-      <div class="card">
-        <div class="card-header"><div class="card-title">Trend Absensi 7 Hari Terakhir</div></div>
-        <div class="table-container">
-          <table class="data-table">
-            <thead><tr><th>Tanggal</th><th>Datang</th><th>Pulang</th></tr></thead>
-            <tbody>${data.trend7Hari.map(t => `<tr><td>${formatDate(t.tanggal)}</td><td>${t.datang}</td><td>${t.pulang}</td></tr>`).join('')}</tbody>
-          </table>
+  }).join('');
+
+  const trendHtml = `
+    <div class="card">
+      <div class="card-header"><div class="dash-section-title">
+        <div class="dash-section-icon" style="background:var(--primary-light); color:var(--primary);">${ICONS.absensi}</div>
+        Trend Absensi 7 Hari Terakhir
+      </div></div>
+      ${data.trend7Hari.length > 0 ? `
+        <div class="dash-chart-wrap">${chartCols}</div>
+        <div class="dash-chart-legend">
+          <div class="dash-chart-legend-item"><span class="dash-chart-legend-dot" style="background:#059669;"></span>Datang</div>
+          <div class="dash-chart-legend-item"><span class="dash-chart-legend-dot" style="background:#d97706;"></span>Pulang</div>
         </div>
-      </div>`;
-  }
+      ` : '<div class="text-muted" style="text-align:center; padding:2rem 0; font-size:0.8125rem;">Belum ada data</div>'}
+    </div>`;
 
   // ===== BELUM ABSEN HARI INI =====
-  let belumAbsenHtml;
-  if(mobile) {
-    const rows = data.belumAbsen.map(u => `
-      <div style="display:flex; align-items:center; gap:0.625rem; padding:0.5rem 0; border-bottom:1px solid var(--border-light);">
-        <span style="width:7px; height:7px; border-radius:50%; background:var(--danger); flex-shrink:0;"></span>
-        <div style="flex:1; min-width:0;">
-          <div style="font-size:0.8125rem; font-weight:600; color:var(--text); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${escapeHtml(u.nama)}</div>
-          <div style="font-size:0.6875rem; color:var(--text-muted);">${escapeHtml(u.jabatan)} &middot; ${escapeHtml(u.sppg)}</div>
+  const belumAbsenHtml = `
+    <div class="card">
+      <div class="card-header flex flex-between items-center"><div class="dash-section-title">
+        <div class="dash-section-icon" style="background:var(--danger-light); color:var(--danger);">${ICONS.warning}</div>
+        Belum Absen Hari Ini
+      </div><span class="badge ${data.belumAbsen.length > 0 ? 'badge-red' : 'badge-green'}">${data.belumAbsen.length}</span></div>
+      <div>
+        ${data.belumAbsen.length > 0 ? data.belumAbsen.map(u => {
+          const initials = (u.nama || '?').trim().split(/\s+/).slice(0,2).map(w => w[0]).join('').toUpperCase();
+          return `
+          <div class="dash-belum-item">
+            <div class="dash-belum-avatar">${escapeHtml(initials)}</div>
+            <div style="flex:1; min-width:0;">
+              <div class="dash-belum-name">${escapeHtml(u.nama)}</div>
+              <div class="dash-belum-meta">${escapeHtml(u.jabatan)} &middot; ${escapeHtml(u.sppg)}</div>
+            </div>
+          </div>`;
+        }).join('') : '<div class="dash-belum-empty">🎉 Semua karyawan sudah absen</div>'}
+      </div>
+    </div>`;
+
+  // ===== DISTRIBUSI PER SPPG & PER JABATAN =====
+  function renderDistribusiCard(title, icon, dataObj, altColor) {
+    const entries = Object.entries(dataObj).sort((a,b) => b[1]-a[1]);
+    const maxV = Math.max(1, ...entries.map(([,v]) => v));
+    const rows = entries.map(([k,v]) => `
+      <div class="dash-dist-row">
+        <div class="dash-dist-top">
+          <span class="dash-dist-name">${escapeHtml(k)}</span>
+          <span class="dash-dist-value">${v}</span>
+        </div>
+        <div class="dash-dist-bar-track">
+          <div class="dash-dist-bar-fill${altColor ? ' alt' : ''}" style="width:${Math.round((v/maxV)*100)}%;"></div>
         </div>
       </div>`).join('');
-    belumAbsenHtml = `
-      <div class="card">
-        <div class="card-header"><div class="card-title">Belum Absen Hari Ini</div></div>
-        <div>${rows || '<div class="text-muted" style="text-align:center; padding:1rem 0; font-size:0.8125rem;">Semua karyawan sudah absen 🎉</div>'}</div>
-      </div>`;
-  } else {
-    belumAbsenHtml = `
-      <div class="card">
-        <div class="card-header"><div class="card-title">Belum Absen Hari Ini</div></div>
-        <div class="table-container">
-          <table class="data-table">
-            <thead><tr><th>Nama</th><th>Jabatan</th><th>SPPG</th></tr></thead>
-            <tbody>${data.belumAbsen.map(u => `<tr><td>${escapeHtml(u.nama)}</td><td>${escapeHtml(u.jabatan)}</td><td>${escapeHtml(u.sppg)}</td></tr>`).join('')}</tbody>
-          </table>
-        </div>
-      </div>`;
-  }
-
-  // ===== ABSENSI PER SPPG & PER JABATAN =====
-  function renderDistribusiCard(title, dataObj) {
-    const entries = Object.entries(dataObj);
-    const maxVal = Math.max(1, ...entries.map(([,v]) => v));
-    if(mobile) {
-      const rows = entries.map(([k,v]) => `
-        <div style="padding:0.5rem 0; border-bottom:1px solid var(--border-light);">
-          <div style="display:flex; justify-content:space-between; font-size:0.8125rem; margin-bottom:0.3rem;">
-            <span style="font-weight:600; color:var(--text);">${escapeHtml(k)}</span>
-            <span style="font-weight:700; color:var(--primary);">${v}</span>
-          </div>
-          <div style="background:#f1f5f9; height:6px; border-radius:3px; overflow:hidden;">
-            <div style="background:var(--primary); height:100%; width:${Math.round((v/maxVal)*100)}%; border-radius:3px;"></div>
-          </div>
-        </div>`).join('');
-      return `
-        <div class="card">
-          <div class="card-header"><div class="card-title">${title}</div></div>
-          <div>${rows || '<div class="text-muted" style="text-align:center; padding:1rem 0; font-size:0.8125rem;">Belum ada data</div>'}</div>
-        </div>`;
-    }
     return `
       <div class="card">
-        <div class="card-header"><div class="card-title">${title}</div></div>
-        <div class="table-container">
-          <table class="data-table">
-            <thead><tr><th>${title.includes('SPPG') ? 'SPPG' : 'Jabatan'}</th><th>Jumlah Karyawan</th></tr></thead>
-            <tbody>${entries.map(([k,v]) => `<tr><td>${escapeHtml(k)}</td><td>${v}</td></tr>`).join('')}</tbody>
-          </table>
-        </div>
+        <div class="card-header"><div class="dash-section-title">
+          <div class="dash-section-icon" style="background:${altColor ? '#ede9fe' : 'var(--primary-light)'}; color:${altColor ? '#7c3aed' : 'var(--primary)'};">${icon}</div>
+          ${title}
+        </div></div>
+        <div>${rows || '<div class="text-muted" style="text-align:center; padding:1.5rem 0; font-size:0.8125rem;">Belum ada data</div>'}</div>
       </div>`;
   }
 
-  const sppgHtml = renderDistribusiCard('Absensi per SPPG', data.sppgData);
-  const jabatanHtml = renderDistribusiCard('Absensi per Jabatan', data.jabatanData);
+  const sppgHtml = renderDistribusiCard('Distribusi per SPPG', ICONS.karyawan, data.sppgData, false);
+  const jabatanHtml = renderDistribusiCard('Distribusi per Jabatan', ICONS.manajemen, data.jabatanData, true);
 
   container.innerHTML = `
-    ${statCardsHtml}
+    ${heroHtml}
     <div class="grid grid-2">${trendHtml}${belumAbsenHtml}</div>
     <div class="grid grid-2">${sppgHtml}${jabatanHtml}</div>
   `;
