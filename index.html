@@ -2824,55 +2824,6 @@
       }
       #btn-pwa-install { padding: 0.375rem 0.625rem; font-size: 0.75rem; }
 
-      /* Chip status absen hari ini di header — muncul hanya di dashboard/beranda */
-      #header-absen-chip {
-        display: none;
-        align-items: center;
-        gap: 6px;
-        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-        color: #065f46;
-        font-size: 0.6875rem;
-        font-weight: 700;
-        padding: 6px 12px;
-        border-radius: 999px;
-        border: 1px solid #6ee7b7;
-        white-space: nowrap;
-        cursor: pointer;
-        transition: var(--transition);
-        flex-shrink: 0;
-        box-shadow: 0 2px 6px rgba(16, 185, 129, 0.2);
-      }
-
-      #header-absen-chip.belum {
-        background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-        color: #991b1b;
-        border-color: #fca5a5;
-        box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
-      }
-
-      #header-absen-chip.show { display: flex; }
-      #header-absen-chip:active { transform: scale(0.95); }
-
-      #header-absen-chip .chip-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: currentColor;
-        flex-shrink: 0;
-        animation: pulseDot 2s ease-in-out infinite;
-      }
-
-      @keyframes pulseDot {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.6; transform: scale(0.9); }
-      }
-
-      /* Hide absen chip on desktop since there's more space */
-      @media (min-width: 1024px) {
-        #header-absen-chip {
-          display: none !important;
-        }
-      }
 
       /* ===== Dashboard: kartu statistik jadi grid 2 kolom rapat ===== */
       #dashboard-admin .grid-4,
@@ -4786,16 +4737,7 @@
       </button>
       <div class="page-title" id="page-title">Dashboard</div>
       <div class="header-actions">
-        <!-- Tombol Inbox Pengaduan (hanya untuk ADMIN) -->
-        <button id="header-inbox-btn" class="header-action-btn admin-only hidden" onclick="navigateTo('inbox-pengaduan')" title="Inbox Pengaduan">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-          <span class="header-notification-badge hidden" id="header-inbox-badge">0</span>
-        </button>
-        <!-- Chip status absen hari ini (hanya muncul di mobile saat di beranda) -->
-        <div id="header-absen-chip" onclick="navigateTo('absen-manual')">
-          <span class="chip-dot"></span>
-          <span id="header-absen-chip-text">Belum Absen</span>
-        </div>
+        <!-- Chip status absen hari ini sudah dipindahkan ke dashboard -->
         <button id="btn-pwa-install" class="btn btn-sm btn-primary hidden">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
           Install App
@@ -6380,26 +6322,6 @@ function navigateTo(page) {
   if(route.type === 'device' && !AppState.device) { page = 'login'; }
   if(page !== 'device-absen' && AppState.device) { page = 'device-absen'; }
   AppState.currentPage = page;
-  // Sembunyikan chip absen jika bukan di dashboard
-  const absenChip = document.getElementById('header-absen-chip');
-  if(absenChip && page !== 'dashboard') absenChip.classList.remove('show');
-  if(page !== 'login' && page !== 'register') {
-    localStorage.setItem('absensi_last_page', page);
-  }
-  $$('.page').forEach(p => p.classList.add('hidden'));
-  const target = document.getElementById(Routes[page].el);
-  if(target) target.classList.remove('hidden');
-  if(page === 'login' || page === 'register') {
-    $('#app-layout').classList.add('hidden');
-    $('#auth-layout').classList.remove('hidden');
-  } else {
-    $('#auth-layout').classList.add('hidden');
-    $('#app-layout').classList.remove('hidden');
-  }
-  $$('.nav-item').forEach(n => n.classList.remove('active'));
-  const navItem = $(`.nav-item[data-page="${page}"]`);
-  if(navItem) navItem.classList.add('active');
-
   // Sync active state bottom bar (semua tab)
   const navMap = {
     'dashboard': 'bottom-bar-dashboard-btn',
@@ -7838,25 +7760,6 @@ function renderDashboardUser(data) {
   const container = $('#dashboard-user');
   container.classList.remove('hidden');
   $('#dashboard-admin').classList.add('hidden');
-
-// Update chip status absen di header mobile
-  (function updateHeaderAbsenChip() {
-    if(window.innerWidth >= 1024) return;
-    const chip = document.getElementById('header-absen-chip');
-    const chipText = document.getElementById('header-absen-chip-text');
-    if(!chip || !chipText) return;
-    chip.classList.add('show');
-    if(data.sudahPulang) {
-      chip.classList.remove('belum');
-      chipText.textContent = '✓ Sudah Pulang';
-    } else if(data.sudahDatang) {
-      chip.classList.remove('belum');
-      chipText.textContent = '✓ Sudah Datang';
-    } else {
-      chip.classList.add('belum');
-      chipText.textContent = 'Belum Absen';
-    }
-  })();
 
   // Notifikasi selamat datang jika foto profil belum diisi
   const welcomeKey = 'welcomed_' + (AppState.user && AppState.user.idUser);
@@ -9309,12 +9212,6 @@ function applyUserUI() {
   });
   $$('.nav-item.admin-only').forEach(n => n.classList.toggle('hidden', role !== 'ADMIN'));
   $$('.nav-item.akuntan-only').forEach(n => n.classList.toggle('hidden', !(role === 'ADMIN' || role === 'AKUNTAN')));
-  
-  // Toggle header inbox button visibility for ADMIN only
-  const headerInboxBtn = document.getElementById('header-inbox-btn');
-  if(headerInboxBtn) {
-    headerInboxBtn.classList.toggle('hidden', role !== 'ADMIN');
-  }
 }
 
 async function handleQrScanned(idCardUnik) {
@@ -10385,14 +10282,6 @@ function _updateInboxUnreadBadge(list) {
     navBadge.textContent = jumlah > 99 ? '99+' : jumlah;
     navBadge.classList.toggle('hidden', jumlah === 0);
   }
-  
-  // Badge di header action button (mobile & desktop)
-  const headerBadge = document.getElementById('header-inbox-badge');
-  if(headerBadge) {
-    headerBadge.textContent = jumlah > 99 ? '99+' : jumlah;
-    headerBadge.classList.toggle('hidden', jumlah === 0);
-  }
-}
 
 // ==================== MODAL DETAIL PENGADUAN ====================
 function showDetailPengaduan(idPengaduan) {
