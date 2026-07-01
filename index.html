@@ -936,7 +936,8 @@
       #absensi-card-list,
       #karyawan-card-list,
       #payroll-card-list,
-      #mypayroll-card-list {
+      #mypayroll-card-list,
+      #audit-card-list {
         display: none !important;
       }
     }
@@ -4568,13 +4569,33 @@
     }
 
     /* Parent (#main-content > #content-area) sudah flex-container yang
-       otomatis mengisi tinggi viewport, jadi min-height:100vh di sini
-       dihapus khusus mobile agar tidak menumpuk tinggi dan memicu
-       scrollbar ganda */
+       otomatis mengisi tinggi viewport. Di mobile, wrapper Absen diubah
+       dari mode "flex-center full height" (penyebab overflow-y:auto
+       otomatis dari overflow-x:hidden -> scrollbar ganda) menjadi layout
+       block biasa mengikuti #content-area, sama seperti halaman
+       My Payroll/Data Karyawan, sehingga tidak ada ruang kosong
+       berlebih di kanan-kiri maupun nested scroll. */
     @media (max-width: 1023px) {
-      .absen-page-wrapper,
-      .absen-step-container {
+      .absen-page-wrapper {
+        display: block;
         min-height: 0;
+        padding: 0;
+        overflow-x: visible;
+      }
+      .absen-step-container {
+        display: block;
+        min-height: 0;
+        padding: 0;
+      }
+      .absen-main-card,
+      .absen-step-card {
+        max-width: 100%;
+        width: 100%;
+        margin: 0;
+        border-radius: var(--radius-lg);
+      }
+      .absen-bg-decoration {
+        display: none;
       }
     }
     
@@ -4709,10 +4730,6 @@
     
     /* Responsive adjustments */
     @media (max-width: 640px) {
-      .absen-page-wrapper {
-        padding: 1rem 0.875rem;
-      }
-      
       .absen-main-card {
         padding: 1.5rem;
         border-radius: 24px;
@@ -10714,6 +10731,10 @@ function showAbsenResult(success, message) {
 // ==================== AUDIT LOG ====================
 async function initAuditLog() {
   const tbody = $('#table-audit tbody');
+  const cardContainer = document.getElementById('audit-card-list');
+  if(cardContainer) { cardContainer.innerHTML = ''; cardContainer.style.display = 'none'; }
+  const wrapper0 = tbody ? tbody.closest('.table-scroll-mobile') : null;
+  if(wrapper0) wrapper0.style.display = '';
   renderTableSkeleton(tbody, 4, 6);
   try {
     const res = await apiCallWithToken('getAuditLog', {});
@@ -10729,6 +10750,41 @@ function renderAuditLog(logs) {
     renderTableEmptyState(tbody, 4, ICONS.audit, 'Belum ada catatan aktivitas', 'Aktivitas pengguna dan sistem akan tercatat di sini secara otomatis.');
     return;
   }
+
+  // ===== MOBILE: render sebagai card list =====
+  if(isMobileView()) {
+    const wrapper = tbody.closest('.table-scroll-mobile');
+    if(wrapper) wrapper.style.display = 'none';
+    let cardContainer = document.getElementById('audit-card-list');
+    if(!cardContainer) {
+      cardContainer = document.createElement('div');
+      cardContainer.id = 'audit-card-list';
+      wrapper.parentNode.insertBefore(cardContainer, wrapper);
+    }
+    cardContainer.innerHTML = logs.map(l => `
+      <div class="mobile-data-card">
+        <div class="mobile-data-card-top">
+          <div>
+            <div class="mobile-data-card-title">${escapeHtml(l.Jenis_Aktivitas)}</div>
+            <div class="mobile-data-card-subtitle">${escapeHtml(l.ID_User_Pelaku)}</div>
+          </div>
+          <span class="badge badge-blue" style="white-space:nowrap;">${formatDateTime(l.Waktu)}</span>
+        </div>
+        <div style="margin-top:0.625rem; padding-top:0.625rem; border-top:1px dashed var(--border); font-size:0.8125rem; color:var(--text-secondary); line-height:1.5;">
+          ${escapeHtml(l.Detail)}
+        </div>
+      </div>
+    `).join('');
+    cardContainer.style.display = '';
+    return;
+  }
+
+  // ===== DESKTOP/TABLET: tabel seperti biasa =====
+  const wrapper = tbody.closest('.table-scroll-mobile');
+  if(wrapper) wrapper.style.display = '';
+  const cardContainer = document.getElementById('audit-card-list');
+  if(cardContainer) cardContainer.style.display = 'none';
+
   tbody.innerHTML = logs.map(l => `
     <tr>
       <td data-label="Waktu">${formatDateTime(l.Waktu)}</td>
