@@ -6870,7 +6870,12 @@ async function processAbsenQueue() {
   if (!queue.length) return;
 
   const remaining = [];
+  const MAX_QUEUE_AGE_MS = 24 * 60 * 60 * 1000; // 24 jam
   for (const item of queue) {
+    if (item.savedAt && (Date.now() - item.savedAt) > MAX_QUEUE_AGE_MS) {
+      showAlert('Absen tertunda (tersimpan lebih dari 24 jam) dibatalkan otomatis karena kadaluwarsa. Mohon lakukan absen ulang.', 'error');
+      continue;
+    }
     try {
       const data = { token: item.token || AppState.token, ...item.payload };
       const res = await apiCall(item.funcName, data);
@@ -6886,6 +6891,7 @@ async function processAbsenQueue() {
         remaining.push(item);
       } else {
         console.warn('[ABSEN_QUEUE] Item gagal permanen, dibuang dari antrean:', err);
+        showAlert('Absen tertunda GAGAL diproses (' + getErrorMessage(err) + '). Mohon lakukan absen ulang secara manual.', 'error');
       }
     }
   }
