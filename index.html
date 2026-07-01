@@ -937,7 +937,8 @@
       #karyawan-card-list,
       #payroll-card-list,
       #mypayroll-card-list,
-      #audit-card-list {
+      #audit-card-list,
+      #myabsensi-card-list {
         display: none !important;
       }
     }
@@ -7035,6 +7036,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(nowMobile !== _lastIsMobile) {
       _lastIsMobile = nowMobile;
       if(AppState.currentPage === 'absensi') initAbsensi();
+      if(AppState.currentPage === 'my-absensi') initMyAbsensi();
     }
   });
 
@@ -10811,6 +10813,10 @@ async function filterAuditLog() {
 async function initMyAbsensi() {
   const tbody = $('#table-my-absensi tbody');
   const summaryEl = $('#myabs-summary');
+  const cardContainer = document.getElementById('myabsensi-card-list');
+  if(cardContainer) { cardContainer.innerHTML = ''; cardContainer.style.display = 'none'; }
+  const wrapper0 = tbody ? tbody.closest('.table-scroll-mobile') : null;
+  if(wrapper0) wrapper0.style.display = '';
   renderTableSkeleton(tbody, 5, 6);
   if(summaryEl) summaryEl.innerHTML = '';
 
@@ -10855,10 +10861,62 @@ function renderMyAbsensiPage(res) {
 
   if(!res.rows || res.rows.length === 0) {
     renderTableEmptyState(tbody, 5, '📋', 'Belum ada data absensi', 'Tidak ada absensi pada bulan yang dipilih.');
+    const cardContainer0 = document.getElementById('myabsensi-card-list');
+    if(cardContainer0) cardContainer0.innerHTML = '';
     return;
   }
 
   const dayNames = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+
+  // ===== MOBILE: render sebagai card list =====
+  if(isMobileView()) {
+    const wrapper = tbody.closest('.table-scroll-mobile');
+    if(wrapper) wrapper.style.display = 'none';
+    let cardContainer = document.getElementById('myabsensi-card-list');
+    if(!cardContainer) {
+      cardContainer = document.createElement('div');
+      cardContainer.id = 'myabsensi-card-list';
+      wrapper.parentNode.insertBefore(cardContainer, wrapper);
+    }
+    cardContainer.innerHTML = res.rows.map(r => {
+      const d = new Date(r.tanggal);
+      const isSunday = d.getDay() === 0;
+      const isSaturday = d.getDay() === 6;
+      const dayColor = isSunday ? '#dc2626' : isSaturday ? '#d97706' : 'var(--text)';
+      const statusBadgeClass = r.lengkap ? 'badge-green' : (r.datang ? 'badge-orange' : 'badge-red');
+      const statusBadgeText = r.lengkap ? 'Lengkap' : (r.datang ? 'Belum Pulang' : 'Tidak Hadir');
+      return `
+        <div class="mobile-data-card">
+          <div class="mobile-data-card-top">
+            <div>
+              <div class="mobile-data-card-title">${escapeHtml(r.tanggal)}</div>
+              <div class="mobile-data-card-subtitle" style="color:${dayColor};">${dayNames[d.getDay()]}</div>
+            </div>
+            <span class="badge ${statusBadgeClass}">${statusBadgeText}</span>
+          </div>
+          <div class="mobile-data-card-row">
+            <div class="mobile-data-card-field">
+              <span class="mobile-data-card-label">Datang</span>
+              <span class="mobile-data-card-value" style="color:${r.datang ? 'var(--success)' : 'var(--text-muted)'};">${r.datang ? escapeHtml(r.datang) : '—'}</span>
+            </div>
+            <div class="mobile-data-card-field">
+              <span class="mobile-data-card-label">Pulang</span>
+              <span class="mobile-data-card-value" style="color:${r.pulang ? 'var(--primary)' : 'var(--text-muted)'};">${r.pulang ? escapeHtml(r.pulang) : '—'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+    cardContainer.style.display = '';
+    return;
+  }
+
+  // ===== DESKTOP/TABLET: tabel seperti biasa =====
+  const wrapper = tbody.closest('.table-scroll-mobile');
+  if(wrapper) wrapper.style.display = '';
+  const cardContainer = document.getElementById('myabsensi-card-list');
+  if(cardContainer) cardContainer.style.display = 'none';
+
   tbody.innerHTML = res.rows.map(r => {
     const d = new Date(r.tanggal);
     const isSunday = d.getDay() === 0;
