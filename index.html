@@ -2945,14 +2945,21 @@
       #myabs-summary .stat-value { font-size: 1.1rem; }
       #myabs-summary .stat-label { font-size: 0.65rem; }
 
-      /* ===== Filter bar (Payroll/Absensi/Catatan Aktivitas/My Absensi): full width & rapi bersusun ===== */
+      /* ===== Filter bar (Payroll/Absensi/Catatan Aktivitas/My Absensi): input & tombol sejajar, hemat ruang ===== */
       #filter-payroll-nama, #filter-payroll-sppg,
       #filter-abs-sppg, #filter-abs-jabatan, #filter-abs-tanggal,
       #filter-audit-jenis, #filter-audit-pelaku, #filter-audit-tanggal,
       #filter-myabs-bulan {
-        width: 100% !important;
+        flex: 1 1 140px;
+        min-width: 0;
       }
-      #btn-filter-absensi, #btn-filter-audit, #btn-filter-myabs, #btn-proses-payroll {
+      #btn-filter-absensi, #btn-filter-audit, #btn-filter-myabs {
+        flex-shrink: 0;
+        justify-content: center;
+        padding: 0.75rem 1.1rem;
+        font-size: 0.875rem;
+      }
+      #btn-proses-payroll {
         width: 100%;
         justify-content: center;
         padding: 0.75rem 1rem;
