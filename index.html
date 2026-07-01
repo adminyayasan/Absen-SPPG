@@ -8504,7 +8504,6 @@ async function doRequestReset() {
   if(!username || !email || !idCard) { showAlert('Semua field wajib diisi'); return; }
   try {
     const res = await apiCall('requestResetPassword', { username, email, idCardUnik: idCard });
-    $('#reset-token').value = res.token;
     $('#reset-password-section').classList.remove('hidden');
     $('#forgot-password-section').classList.add('hidden');
     showAlert('Verifikasi berhasil. Silakan masukkan password baru.', 'success');
@@ -9338,7 +9337,7 @@ function renderUserGrid(users) {
         <div class="user-card-role">${escapeHtml(u.Jabatan_Divisi)} &bull; ${escapeHtml(u.SPPG)}</div>
         <div class="flex flex-between items-center" style="margin-top:0.5rem;">
           <span class="badge ${isActive(u.Status_Aktif)?'badge-green':'badge-red'}" id="status-badge-${u.ID_User}">${isActive(u.Status_Aktif)?'Aktif':'Nonaktif'}</span>
-          <button class="btn btn-sm btn-outline" onclick="event.stopPropagation(); quickToggleUserStatus('${u.ID_User}', ${isActive(u.Status_Aktif)}, '${escapeHtml(u.Nama_Lengkap)}')">
+          <button class="btn btn-sm btn-outline js-toggle-user-status" data-id-user="${escapeHtml(u.ID_User)}" data-currently-active="${isActive(u.Status_Aktif)}" data-nama-lengkap="${escapeHtml(u.Nama_Lengkap)}">
             ${isActive(u.Status_Aktif) ? 'Nonaktifkan' : 'Aktifkan'}
           </button>
         </div>
@@ -9349,6 +9348,19 @@ function renderUserGrid(users) {
 
 // Toggle status user dengan jeda 5 detik + tombol Undo,
 // agar admin tidak salah klik mengubah akses karyawan secara permanen
+// Event delegation untuk tombol toggle status user — menggantikan onclick inline
+// yang rentan XSS jika Nama_Lengkap mengandung karakter kutip.
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('.js-toggle-user-status');
+  if (!btn) return;
+  e.stopPropagation();
+  const idUser = btn.dataset.idUser;
+  const currentlyActive = btn.dataset.currentlyActive === 'true';
+  const namaLengkap = btn.dataset.namaLengkap;
+  quickToggleUserStatus(idUser, currentlyActive, namaLengkap);
+});
+
+
 function quickToggleUserStatus(idUser, currentlyActive, namaLengkap) {
   const newStatus = !currentlyActive;
   const badge = document.getElementById('status-badge-' + idUser);
@@ -10410,7 +10422,7 @@ async function startFaceScan() {
       attempts++;
       if(attempts > 240) {
         done=true; clearInterval(interval); stopVideo();
-        await recordAbsensi(deviceIdUser, 0, 'GAGAL');
+        showDeviceResult(false, 'Waktu habis. Wajah tidak terverifikasi. Silakan coba lagi.');
         return;
       }
       const det = await faceapi
@@ -10450,10 +10462,10 @@ async function startFaceScan() {
             if(statusEl) statusEl.textContent=`Skor kecocokan: ${skor.toFixed(1)}%`;
             if(skor>FACE_MATCH_THRESHOLD){
               done=true;clearInterval(interval);stopVideo();
-              await recordAbsensi(deviceIdUser,skor,'VALID');
+              await recordAbsensi(deviceIdUser,Array.from(det.descriptor));
             } else if(attempts>160){
               done=true;clearInterval(interval);stopVideo();
-              await recordAbsensi(deviceIdUser,skor,'GAGAL');
+              await recordAbsensi(deviceIdUser,Array.from(det.descriptor));
             }
           }
           break;
@@ -10466,15 +10478,13 @@ async function startFaceScan() {
   }
 }
 
-async function recordAbsensi(idUser, skor, status) {
+async function recordAbsensi(idUser, faceDescriptorScan) {
   try {
-    const res = await apiCallWithToken('recordAbsensi', { idUser, skorKecocokan: skor / 100, statusValidasi: status });
-    if(res.success && status === 'VALID') {
+    const res = await apiCallWithToken('recordAbsensi', { idUser, faceDescriptorScan });
+    if(res.success) {
       showDeviceResult(true, `${res.nama} - ${res.message} (${res.waktu})`);
-    } else if (res.success && status === 'GAGAL') {
-      showDeviceResult(false, 'Absensi tidak berhasil. Wajah tidak terverifikasi (skor di bawah ' + FACE_MATCH_THRESHOLD + '%). Silakan coba lagi.');
     } else {
-      showDeviceResult(false, res.message || 'Absensi tidak berhasil.');
+      showDeviceResult(false, res.message || 'Absensi tidak berhasil. Wajah tidak terverifikasi (skor di bawah ' + FACE_MATCH_THRESHOLD + '%). Silakan coba lagi.');
     }
   } catch(e) {
     showDeviceResult(false, 'Absensi tidak berhasil. ' + getErrorMessage(e));
@@ -10768,7 +10778,7 @@ async function startAbsenSelfFaceScan() {
             if(skor > FACE_MATCH_THRESHOLD){
               done=true;clearInterval(interval);stopVideo();
               try {
-                const res2=await queueAbsenSelf('recordAbsensiSelf',{idUser:absenIdUser,skorKecocokan:skor/100,statusValidasi:'VALID',lat:absenLat,lng:absenLng});
+                const res2=await queueAbsenSelf('recordAbsensiSelf',{idUser:absenIdUser,faceDescriptorScan:Array.from(det.descriptor),lat:absenLat,lng:absenLng});
                 if(res2.success === false){
                   showAbsenSelfResult(false, res2.message || 'Absen tidak berhasil.');
                 } else {
@@ -11000,7 +11010,7 @@ async function startAbsenFaceScan() {
             if(skor>FACE_MATCH_THRESHOLD){
               done=true;clearInterval(interval);stopVideo();
               try {
-                const res2=await queueAbsenSelf('recordAbsensiSelf',{idUser:absenIdUser,skorKecocokan:skor/100,statusValidasi:'VALID',lat:absenLat,lng:absenLng});
+                const res2=await queueAbsenSelf('recordAbsensiSelf',{idUser:absenIdUser,faceDescriptorScan:Array.from(det.descriptor),lat:absenLat,lng:absenLng});
                 if(res2.success === false){
                   showAbsenResult(false, res2.message || 'Absen tidak berhasil.');
                 } else {
