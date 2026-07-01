@@ -9401,16 +9401,33 @@ function getCurrentLocation() {
       reject('Browser tidak mendukung GPS');
       return;
     }
+
+    function tryLowAccuracy() {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        (err2) => {
+          let msg = 'Tidak dapat mengakses lokasi';
+          if (err2.code === 1) msg = 'Izin lokasi ditolak. Aktifkan izin lokasi untuk browser/HP ini';
+          else if (err2.code === 2) msg = 'Lokasi tidak tersedia. Pastikan GPS/lokasi aktif';
+          else if (err2.code === 3) msg = 'Waktu permintaan lokasi habis. Pastikan GPS aktif dan coba di area terbuka';
+          reject(msg);
+        },
+        { enableHighAccuracy: false, timeout: 20000, maximumAge: 30000 }
+      );
+    }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
       (err) => {
-        let msg = 'Tidak dapat mengakses lokasi';
-        if (err.code === 1) msg = 'Izin lokasi ditolak. Aktifkan izin lokasi untuk browser/HP ini';
-        else if (err.code === 2) msg = 'Lokasi tidak tersedia. Pastikan GPS aktif';
-        else if (err.code === 3) msg = 'Waktu permintaan lokasi habis. Coba lagi';
-        reject(msg);
+        // Jika percobaan akurasi tinggi gagal karena izin ditolak, langsung berhenti (tidak perlu retry)
+        if (err.code === 1) {
+          reject('Izin lokasi ditolak. Aktifkan izin lokasi untuk browser/HP ini');
+          return;
+        }
+        // Untuk timeout atau lokasi tidak tersedia, coba lagi dengan akurasi rendah (lebih cepat didapat)
+        tryLowAccuracy();
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   });
 }
