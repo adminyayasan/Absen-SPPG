@@ -935,7 +935,8 @@
     @media (min-width: 640px) {
       #absensi-card-list,
       #karyawan-card-list,
-      #payroll-card-list {
+      #payroll-card-list,
+      #mypayroll-card-list {
         display: none !important;
       }
     }
@@ -9276,11 +9277,60 @@ function renderPayrollTable() {
 function _renderPayrollRows(list) {
   const tbody = document.getElementById('tbody-payroll');
   if(!tbody) return;
+
   if(!list || list.length === 0) {
     renderTableEmptyState(tbody, 6, '👥', 'Belum ada karyawan', 'Tidak ada karyawan yang sesuai filter atau belum ada karyawan aktif dengan role USER.');
+    const cardContainer0 = document.getElementById('payroll-card-list');
+    if(cardContainer0) cardContainer0.innerHTML = '';
     updatePayrollSelectedCount();
     return;
   }
+
+  // ===== MOBILE: render sebagai card list dengan checkbox =====
+  if(isMobileView()) {
+    const wrapper = tbody.closest('.table-scroll-mobile');
+    if(wrapper) wrapper.style.display = 'none';
+    let cardContainer = document.getElementById('payroll-card-list');
+    if(!cardContainer) {
+      cardContainer = document.createElement('div');
+      cardContainer.id = 'payroll-card-list';
+      wrapper.parentNode.insertBefore(cardContainer, wrapper);
+    }
+    cardContainer.innerHTML = list.map(k => {
+      const checked = selectedPayrollKaryawan.includes(k.idUser) ? 'checked' : '';
+      return `
+      <div class="mobile-data-card" id="payroll-row-${escapeHtml(k.idUser)}" style="display:flex; align-items:flex-start; gap:0.625rem;">
+        <input type="checkbox" class="payroll-check" data-id="${escapeHtml(k.idUser)}" ${checked}
+          style="margin-top:0.2rem; width:18px; height:18px; accent-color:var(--primary); flex-shrink:0;"
+          onchange="togglePayrollSelect('${escapeHtml(k.idUser)}', this.checked)">
+        <div style="flex:1; min-width:0;">
+          <div class="mobile-data-card-top">
+            <div>
+              <div class="mobile-data-card-title">${escapeHtml(k.namaLengkap)}</div>
+              <div class="mobile-data-card-subtitle">${escapeHtml(k.jabatanDivisi||'-')} &middot; ${escapeHtml(k.sppg||'-')}</div>
+            </div>
+            <span class="badge badge-blue">${escapeHtml(k.role||'USER')}</span>
+          </div>
+          <div class="mobile-data-card-row">
+            <div class="mobile-data-card-field">
+              <span class="mobile-data-card-label">Gaji Harian</span>
+              <span class="mobile-data-card-value">${formatRupiah(k.gajiHarian)}</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+    cardContainer.style.display = '';
+    updatePayrollSelectedCount();
+    return;
+  }
+
+  // ===== DESKTOP/TABLET: tabel seperti biasa =====
+  const wrapper = tbody.closest('.table-scroll-mobile');
+  if(wrapper) wrapper.style.display = '';
+  const cardContainer = document.getElementById('payroll-card-list');
+  if(cardContainer) cardContainer.style.display = 'none';
+
   tbody.innerHTML = list.map(k => {
     const checked = selectedPayrollKaryawan.includes(k.idUser) ? 'checked' : '';
     return `<tr id="payroll-row-${k.idUser}">
@@ -9558,33 +9608,78 @@ let _myProfileForSlip = {};
 
 async function initMyPayroll() {
   const tbody = $('#table-my-payroll tbody');
+  const cardContainer = document.getElementById('mypayroll-card-list');
+  if(cardContainer) { cardContainer.innerHTML = ''; cardContainer.style.display = 'none'; }
+  const wrapper0 = tbody ? tbody.closest('.table-scroll-mobile') : null;
+  if(wrapper0) wrapper0.style.display = '';
   renderTableSkeleton(tbody, 4, 4);
   try {
     const res = await apiCallWithToken('getMyPayroll', {});
     _mySlipData = res.payroll || [];
     _myProfileForSlip = { namaLengkap: res.namaLengkap, jabatanDivisi: res.jabatanDivisi, sppg: res.sppg };
-    if(_mySlipData.length === 0) {
-      renderTableEmptyState(tbody, 4, ICONS.mypayroll, 'Belum ada slip gaji', 'Slip gaji akan muncul di sini setelah payroll diproses Admin/Akuntan.', 'Lihat Absensi Saya', () => navigateTo('absen-manual'));
-      return;
-    }
-    tbody.innerHTML = _mySlipData.map((p, idx) => `
-      <tr>
-        <td>${formatDate(p.periodeMulai)}</td>
-        <td>${formatDate(p.periodeAkhir)}</td>
-        <td style="text-align:center;">${p.jumlahHariKerja}</td>
-        <td>${formatRupiah(p.gajiHarian||0)}</td>
-        <td style="font-weight:600;">${formatRupiah(p.totalGaji)}</td>
-        <td>
-          <div class="flex gap-1 flex-wrap">
-            <button class="btn btn-sm btn-primary" onclick="showSlipDetail(${idx})">${ICONS.image} Lihat Slip</button>
-            ${p.urlPdf ? `<a href="${p.urlPdf}" target="_blank" class="btn btn-sm btn-outline">PDF</a>` : ''}
-          </div>
-        </td>
-      </tr>
-    `).join('');
+    renderMyPayrollView(_mySlipData);
   } catch(e) {
     renderTableErrorState(tbody, 4, e, initMyPayroll);
   }
+}
+
+function renderMyPayrollView(data) {
+  const tbody = $('#table-my-payroll tbody');
+  if(!data || data.length === 0) {
+    renderTableEmptyState(tbody, 4, ICONS.mypayroll, 'Belum ada slip gaji', 'Slip gaji akan muncul di sini setelah payroll diproses Admin/Akuntan.', 'Lihat Absensi Saya', () => navigateTo('absen-manual'));
+    return;
+  }
+
+  // ===== MOBILE: render sebagai card list =====
+  if(isMobileView()) {
+    const wrapper = tbody.closest('.table-scroll-mobile');
+    if(wrapper) wrapper.style.display = 'none';
+    let cardContainer = document.getElementById('mypayroll-card-list');
+    if(!cardContainer) {
+      cardContainer = document.createElement('div');
+      cardContainer.id = 'mypayroll-card-list';
+      wrapper.parentNode.insertBefore(cardContainer, wrapper);
+    }
+    cardContainer.innerHTML = data.map((p, idx) => `
+      <div class="mobile-data-card">
+        <div class="mobile-data-card-top">
+          <div>
+            <div class="mobile-data-card-title">${formatDate(p.periodeMulai)} &ndash; ${formatDate(p.periodeAkhir)}</div>
+            <div class="mobile-data-card-subtitle">${p.jumlahHariKerja} hari kerja &middot; ${formatRupiah(p.gajiHarian||0)}/hari</div>
+          </div>
+          <span class="badge badge-green">${formatRupiah(p.totalGaji)}</span>
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-top:0.75rem; padding-top:0.625rem; border-top:1px dashed var(--border);">
+          <button class="btn btn-sm btn-primary" onclick="showSlipDetail(${idx})">${ICONS.image} Lihat Slip</button>
+          ${p.urlPdf ? `<a href="${p.urlPdf}" target="_blank" class="btn btn-sm btn-outline">PDF</a>` : ''}
+        </div>
+      </div>
+    `).join('');
+    cardContainer.style.display = '';
+    return;
+  }
+
+  // ===== DESKTOP/TABLET: tabel seperti biasa =====
+  const wrapper = tbody.closest('.table-scroll-mobile');
+  if(wrapper) wrapper.style.display = '';
+  const cardContainer = document.getElementById('mypayroll-card-list');
+  if(cardContainer) cardContainer.style.display = 'none';
+
+  tbody.innerHTML = data.map((p, idx) => `
+    <tr>
+      <td>${formatDate(p.periodeMulai)}</td>
+      <td>${formatDate(p.periodeAkhir)}</td>
+      <td style="text-align:center;">${p.jumlahHariKerja}</td>
+      <td>${formatRupiah(p.gajiHarian||0)}</td>
+      <td style="font-weight:600;">${formatRupiah(p.totalGaji)}</td>
+      <td>
+        <div class="flex gap-1 flex-wrap">
+          <button class="btn btn-sm btn-primary" onclick="showSlipDetail(${idx})">${ICONS.image} Lihat Slip</button>
+          ${p.urlPdf ? `<a href="${p.urlPdf}" target="_blank" class="btn btn-sm btn-outline">PDF</a>` : ''}
+        </div>
+      </td>
+    </tr>
+  `).join('');
 }
 
 function showSlipDetail(idx) {
