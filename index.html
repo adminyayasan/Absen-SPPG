@@ -4300,7 +4300,7 @@
     /* Header Section */
     .absen-header {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-start;
       align-items: center;
       margin-bottom: 1.5rem;
     }
@@ -4331,35 +4331,6 @@
     
     .absen-back-btn svg {
       stroke-width: 2.5;
-    }
-    
-    .absen-profile-section {
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    
-    .absen-online-indicator {
-      position: absolute;
-      bottom: 2px;
-      right: 2px;
-      width: 12px;
-      height: 12px;
-      background: #22C55E;
-      border: 2px solid #FFFFFF;
-      border-radius: 50%;
-      z-index: 2;
-      box-shadow: 0 0 0 2px rgba(34,197,94,0.2);
-    }
-    
-    .absen-profile-img {
-      width: 44px;
-      height: 44px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 2px solid #EEF2F7;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
     }
     
     /* Title Section */
@@ -5677,10 +5648,6 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
                 <span>Kembali ke Dashboard</span>
               </button>
-              <div class="absen-profile-section">
-                <div class="absen-online-indicator"></div>
-                <img src="" alt="Profile" class="absen-profile-img" id="absen-profile-image">
-              </div>
             </div>
             
             <!-- Title Section -->
@@ -6752,6 +6719,9 @@ async function doLogin() {
       startSessionCheck();
       // Terapkan UI user dengan error handling
       try { applyUserUI(); } catch(e) { console.warn('[LOGIN] applyUserUI error:', e); }
+      // Preload model face-api di background agar saat user membuka kamera/scan
+      // pertama kali tidak perlu menunggu 1-3 detik loading model
+      loadFaceApiModels().catch(() => {});
       // Navigasi dengan timeout untuk memastikan state sudah siap
       setTimeout(() => {
         if(res.user.role === 'DEVICE ABSEN') {
@@ -6771,6 +6741,8 @@ async function doLogin() {
       localStorage.removeItem('absensi_user');
       startSessionCheck();
       try { applyUserUI(); } catch(e) { console.warn('[LOGIN] applyUserUI error:', e); }
+      // Preload model face-api di background untuk device absen (kios)
+      loadFaceApiModels().catch(() => {});
       setTimeout(() => navigateTo('device-absen'), 100);
     }
   } catch(e) {
@@ -6957,6 +6929,8 @@ document.addEventListener('DOMContentLoaded', () => {
         AppState.device = res.session;
         hideSessionLoading();
         navigateTo('device-absen');
+        // Preload model face-api di background untuk device absen (kios)
+        loadFaceApiModels().catch(() => {});
       } else {
         AppState.user = { ...AppState.user, ...res.session };
         startSessionCheck();
@@ -6969,6 +6943,8 @@ document.addEventListener('DOMContentLoaded', () => {
         navigateTo(allowed ? lastPage : 'dashboard');
         // Prefetch data di background setelah halaman pertama muncul
         setTimeout(() => prefetchCommonData(), 800);
+        // Preload model face-api di background agar buka kamera/scan pertama kali lebih cepat
+        loadFaceApiModels().catch(() => {});
       }
     }).catch(() => {
       clearSession();
@@ -7560,20 +7536,29 @@ async function startRegWajahScan() {
   if (statusBox) { statusBox.style.display = 'block'; statusBox.textContent = 'Menyiapkan kamera...'; }
 
   const camLoadOverlay = showCameraLoadingOverlay('reg-wajah-video');
+  const video = document.getElementById('reg-wajah-video');
+  if (!video) { hideCameraLoadingOverlay(camLoadOverlay); return; }
+
+  // Jalankan loadModel & getUserMedia SECARA PARALEL (bukan berurutan) agar lebih cepat
+  const modelPromise = AppState.modelsLoaded ? Promise.resolve() : loadFaceApiModels(camLoadOverlay);
+  const streamPromise = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:{ideal:640}, height:{ideal:480} } });
+
+  let stream;
   try {
-    if (!AppState.modelsLoaded) await loadFaceApiModels(camLoadOverlay);
+    const results = await Promise.all([modelPromise, streamPromise]);
+    stream = results[1];
   } catch(e) {
     hideCameraLoadingOverlay(camLoadOverlay);
     resetRegWajahUI();
     const btnStart2 = document.getElementById('btn-reg-start-wajah');
     if (btnStart2) btnStart2.classList.remove('hidden');
+    if(!AppState.modelsLoaded) return; // gagal load model, hentikan
+    // Jika model sudah OK tapi kamera gagal, tampilkan pesan kamera
+    showAlert('Gagal akses kamera: ' + getErrorMessage(e), 'danger');
     return;
   }
 
-  const video = document.getElementById('reg-wajah-video');
-  if (!video) return;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:{ideal:640}, height:{ideal:480} } });
     AppState.videoStream = stream;
     video.srcObject = stream;
     video.style.transform = 'scaleX(-1)';
@@ -7660,7 +7645,8 @@ async function startRegWajahScan() {
     AppState._captureFaceInterval = RegState.wajahInterval;
   } catch(e) {
     hideCameraLoadingOverlay(camLoadOverlay);
-    showAlert('Gagal akses kamera: ' + e.message, 'danger');
+    stopVideo();
+    showAlert('Gagal memulai scan wajah: ' + getErrorMessage(e), 'danger');
     resetRegWajahUI();
     const btnStart3 = document.getElementById('btn-reg-start-wajah');
     if (btnStart3) btnStart3.classList.remove('hidden');
@@ -8858,15 +8844,24 @@ function showUpdateWajahModal() {
 
 async function startWajahCapture(videoId, canvasId, statusId) {
   const camLoadOverlay = showCameraLoadingOverlay(videoId);
+  const video = $(`#${videoId}`);
+  if(!video) { hideCameraLoadingOverlay(camLoadOverlay); return; }
+
+  // Jalankan loadModel & getUserMedia SECARA PARALEL agar lebih cepat
+  const modelPromise = AppState.modelsLoaded ? Promise.resolve() : loadFaceApiModels(camLoadOverlay);
+  const streamPromise = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:{ideal:640}, height:{ideal:480} } });
+
+  let stream;
   try {
-    if(!AppState.modelsLoaded) await loadFaceApiModels(camLoadOverlay);
+    const results = await Promise.all([modelPromise, streamPromise]);
+    stream = results[1];
   } catch(e) {
     hideCameraLoadingOverlay(camLoadOverlay);
+    if(AppState.modelsLoaded) showAlert('Gagal akses kamera: ' + getErrorMessage(e));
     return;
   }
-  const video = $(`#${videoId}`);
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:{ideal:640}, height:{ideal:480} } });
     AppState.videoStream = stream;
     video.srcObject = stream;
     video.style.transform = 'scaleX(-1)';
@@ -8944,7 +8939,8 @@ async function startWajahCapture(videoId, canvasId, statusId) {
     }, 500);
   } catch(e) {
     hideCameraLoadingOverlay(camLoadOverlay);
-    showAlert('Gagal akses kamera: '+e.message);
+    stopVideo();
+    showAlert('Gagal memulai scan wajah: ' + getErrorMessage(e));
   }
 }
 
@@ -9871,15 +9867,24 @@ const FACE_MATCH_THRESHOLD = 60;
 
 async function startFaceScan() {
   const camLoadOverlay = showCameraLoadingOverlay('device-face-video');
+  const video = $('#device-face-video');
+  if(!video) { hideCameraLoadingOverlay(camLoadOverlay); return; }
+
+  // Jalankan loadModel & getUserMedia SECARA PARALEL agar lebih cepat
+  const modelPromise = AppState.modelsLoaded ? Promise.resolve() : loadFaceApiModels(camLoadOverlay);
+  const streamPromise = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:{ideal:640}, height:{ideal:480} } });
+
+  let stream;
   try {
-    if(!AppState.modelsLoaded) await loadFaceApiModels(camLoadOverlay);
+    const results = await Promise.all([modelPromise, streamPromise]);
+    stream = results[1];
   } catch(e) {
     hideCameraLoadingOverlay(camLoadOverlay);
+    if(AppState.modelsLoaded) showDeviceResult(false, 'Gagal akses kamera: ' + getErrorMessage(e));
     return;
   }
-  const video = $('#device-face-video');
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:{ideal:640}, height:{ideal:480} } });
     AppState.videoStream = stream;
     video.srcObject = stream;
     video.style.transform = 'scaleX(-1)';
@@ -9960,7 +9965,8 @@ async function startFaceScan() {
     }, 500);
   } catch(e) {
     hideCameraLoadingOverlay(camLoadOverlay);
-    showDeviceResult(false, 'Gagal akses kamera: '+e.message);
+    stopVideo();
+    showDeviceResult(false, 'Gagal memulai scan wajah: ' + getErrorMessage(e));
   }
 }
 
@@ -10038,16 +10044,7 @@ function getCurrentLocation() {
 
 function initAbsenManual() {
   resetAbsenFlow();
-  
-  // Set profile image from currentUser if available
-  const profileImg = $('#absen-profile-image');
-  if (profileImg && window.currentUser) {
-    const photoUrl = window.currentUser.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(window.currentUser.displayName || 'User') + '&background=3B82F6&color=fff&size=128';
-    profileImg.src = photoUrl;
-  } else if (profileImg) {
-    profileImg.src = 'https://ui-avatars.com/api/?name=User&background=3B82F6&color=fff&size=128';
-  }
-  
+
   function updateAbsenClock() {
     const now = new Date();
     const c = $('#absen-clock'); const d = $('#absen-date');
@@ -10162,15 +10159,24 @@ function updateScanSteps(containerId, hintBoxId, stepKey, hintText) {
 
 async function startAbsenSelfFaceScan() {
   const camLoadOverlay = showCameraLoadingOverlay('absen-self-video');
+  const video = $('#absen-self-video');
+  if(!video) { hideCameraLoadingOverlay(camLoadOverlay); return; }
+
+  // Jalankan loadModel & getUserMedia SECARA PARALEL agar lebih cepat
+  const modelPromise = AppState.modelsLoaded ? Promise.resolve() : loadFaceApiModels(camLoadOverlay);
+  const streamPromise = navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width:{ideal:640}, height:{ideal:480} } });
+
+  let stream;
   try {
-    if(!AppState.modelsLoaded) await loadFaceApiModels(camLoadOverlay);
+    const results = await Promise.all([modelPromise, streamPromise]);
+    stream = results[1];
   } catch(e) {
     hideCameraLoadingOverlay(camLoadOverlay);
+    if(AppState.modelsLoaded) showAbsenSelfResult(false, 'Gagal akses kamera: ' + getErrorMessage(e));
     return;
   }
-  const video = $('#absen-self-video');
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: currentFacingMode, width:{ideal:640}, height:{ideal:480} } });
     AppState.videoStream = stream;
     video.srcObject = stream;
     video.style.transform = 'scaleX(-1)';
@@ -10291,7 +10297,8 @@ async function startAbsenSelfFaceScan() {
     }, 500);
   } catch(e) {
     hideCameraLoadingOverlay(camLoadOverlay);
-    showAbsenSelfResult(false, 'Gagal akses kamera: '+e.message);
+    stopVideo();
+    showAbsenSelfResult(false, 'Gagal memulai scan wajah: ' + getErrorMessage(e));
   }
 }
 
@@ -10409,15 +10416,24 @@ async function handleAbsenQrScanned(idCardUnik, cameras) {
 
 async function startAbsenFaceScan() {
   const camLoadOverlay = showCameraLoadingOverlay('absen-face-video');
+  const video = $('#absen-face-video');
+  if(!video) { hideCameraLoadingOverlay(camLoadOverlay); return; }
+
+  // Jalankan loadModel & getUserMedia SECARA PARALEL agar lebih cepat
+  const modelPromise = AppState.modelsLoaded ? Promise.resolve() : loadFaceApiModels(camLoadOverlay);
+  const streamPromise = navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:{ideal:640}, height:{ideal:480} } });
+
+  let stream;
   try {
-    if(!AppState.modelsLoaded) await loadFaceApiModels(camLoadOverlay);
+    const results = await Promise.all([modelPromise, streamPromise]);
+    stream = results[1];
   } catch(e) {
     hideCameraLoadingOverlay(camLoadOverlay);
+    if(AppState.modelsLoaded) showAbsenResult(false, 'Gagal akses kamera: ' + getErrorMessage(e));
     return;
   }
-  const video = $('#absen-face-video');
+
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width:{ideal:640}, height:{ideal:480} } });
     AppState.videoStream = stream;
     video.srcObject = stream;
     video.style.transform = 'scaleX(-1)';
@@ -10507,7 +10523,8 @@ async function startAbsenFaceScan() {
     }, 500);
   } catch(e) {
     hideCameraLoadingOverlay(camLoadOverlay);
-    showAbsenResult(false, 'Gagal akses kamera: '+e.message);
+    stopVideo();
+    showAbsenResult(false, 'Gagal memulai scan wajah: ' + getErrorMessage(e));
   }
 }
 
